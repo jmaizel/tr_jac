@@ -1,0 +1,47 @@
+services:
+  database:
+    image: postgres:15-alpine
+    container_name: transcendence-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: transcendence_dev
+      POSTGRES_USER: transcendence
+      POSTGRES_PASSWORD: dev_secure_f8a9c2e1b4d7
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - transcendence-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transcendence"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  backend_a:
+    build:
+      context: ../../backend_a
+      dockerfile: ../devops_E/docker/backend/Dockerfile
+    container_name: transcendence-backend-a
+    ports:
+      - "3000:3000"
+    environment:
+      POSTGRES_HOST: database
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: transcendence_dev
+      POSTGRES_USER: transcendence
+      POSTGRES_PASSWORD: dev_secure_f8a9c2e1b4d7
+      DATABASE_URL: postgresql://transcendence:dev_secure_f8a9c2e1b4d7@database:5432/transcendence_dev
+      NODE_ENV: development
+    depends_on:
+      - database
+    networks:
+      - transcendence-network
+
+volumes:
+  postgres_data:
+
+networks:
+  transcendence-network:
+    driver: bridge
