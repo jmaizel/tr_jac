@@ -1,7 +1,8 @@
-// frontend_B/src/components/Navigation.tsx - VERSION SIMPLIFIÉE POUR TEST
+// frontend_B/src/components/Navigation.tsx - CONNECTÉ AU USERCONTEXT
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useUser } from '../contexts/UserContext';
 
 const Navigation: React.FC = () => {
   const location = useLocation();
@@ -9,22 +10,12 @@ const Navigation: React.FC = () => {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Utilisateur en dur pour tester
-  const user = {
-    id: 1,
-    username: 'Jacob',
-    email: 'jacob@ecole42.fr',
-    avatar: '👨‍💻',
-    displayName: 'Jacob Maizel',
-    totalScore: 1250,
-    gamesWon: 15,
-    winRate: 75.5,
-    totalGames: 20
-  };
-  const isLoggedIn = true;
+  // 🎯 UTILISER LE VRAI CONTEXTE UTILISATEUR
+  const { user, isLoggedIn, logout } = useUser();
 
   const navItems = [
     { path: '/', label: 'Home', icon: '🏠' },
+    { path: '/game', label: 'Jouer', icon: '🎮' },
     { path: '/tournaments', label: 'Tournaments', icon: '🏆' },
     { path: '/leaderboard', label: 'Leaderboard', icon: '📊' },
     { path: '/profile', label: 'Profile', icon: '👤' },
@@ -57,19 +48,39 @@ const Navigation: React.FC = () => {
     setIsProfileDropdownOpen(false);
     
     switch (action) {
+      case 'game':
+        navigate('/game');
+        break;
       case 'profile':
         navigate('/profile');
         break;
       case 'settings':
-        navigate('/profile');
+        navigate('/settings');
+        break;
+      case 'tournaments':
+        navigate('/tournaments');
         break;
       case 'logout':
         if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
-          console.log('🚪 Déconnexion simulée');
+          logout(); // 🎯 Utiliser la vraie fonction logout
         }
         break;
     }
   };
+
+  // 🎨 Helper pour afficher les statistiques
+  const formatStats = () => {
+    if (!user) return null;
+
+    return {
+      gamesText: user.totalGames === 0 ? 'Aucune partie' : `${user.totalGames} parties`,
+      winsText: user.gamesWon === 0 ? 'Aucune victoire' : `${user.gamesWon} victoires`,
+      winRateText: user.totalGames === 0 ? '0%' : `${user.winRate.toFixed(1)}%`,
+      tournamentsText: user.tournamentsWon === 0 ? 'Aucun tournoi' : `${user.tournamentsWon} tournois`
+    };
+  };
+
+  const stats = formatStats();
 
   return (
     <nav className="navigation">
@@ -107,7 +118,8 @@ const Navigation: React.FC = () => {
                   border: '1px solid #e2e8f0',
                   borderRadius: '25px',
                   padding: '0.25rem 0.75rem 0.25rem 0.25rem',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
                 }}
               >
                 <span className="user-avatar" style={{
@@ -121,7 +133,7 @@ const Navigation: React.FC = () => {
                   justifyContent: 'center',
                   fontWeight: '600'
                 }}>
-                  {user.avatar}
+                  {user.avatar || '👤'}
                 </span>
                 <span className="user-name" style={{ fontWeight: '600', color: '#4a5568' }}>
                   {user.username}
@@ -136,7 +148,7 @@ const Navigation: React.FC = () => {
                 </span>
               </button>
 
-              {/* Dropdown Menu */}
+              {/* 🎯 DROPDOWN AVEC VRAIES DONNÉES */}
               {isProfileDropdownOpen && (
                 <div className="profile-dropdown" style={{
                   position: 'absolute',
@@ -151,6 +163,7 @@ const Navigation: React.FC = () => {
                   marginTop: '0.5rem',
                   overflow: 'hidden'
                 }}>
+                  {/* Header avec vraies données utilisateur */}
                   <div className="dropdown-header" style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -170,7 +183,7 @@ const Navigation: React.FC = () => {
                       fontSize: '1.5rem',
                       border: '2px solid rgba(255, 255, 255, 0.3)'
                     }}>
-                      {user.avatar}
+                      {user.avatar || '👤'}
                     </div>
                     <div className="dropdown-user-info" style={{ flex: '1' }}>
                       <div className="dropdown-username" style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '0.25rem' }}>
@@ -182,9 +195,62 @@ const Navigation: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="dropdown-divider" style={{ height: '1px', background: '#e2e8f0', margin: '0.25rem 0' }}></div>
+                  {/* 📊 Statistiques réelles */}
+                  {stats && (
+                    <div className="dropdown-stats" style={{
+                      padding: '0.75rem 1rem',
+                      background: 'rgba(102, 126, 234, 0.05)',
+                      borderBottom: '1px solid #e2e8f0'
+                    }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.8rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span>🎮</span>
+                          <span style={{ color: '#667eea', fontWeight: '600' }}>{stats.gamesText}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span>🏆</span>
+                          <span style={{ color: '#667eea', fontWeight: '600' }}>{stats.winsText}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span>📈</span>
+                          <span style={{ color: '#667eea', fontWeight: '600' }}>Taux: {stats.winRateText}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span>🏅</span>
+                          <span style={{ color: '#667eea', fontWeight: '600' }}>{stats.tournamentsText}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
+                  <div className="dropdown-divider" style={{ height: '1px', background: '#e2e8f0', margin: '0' }}></div>
+                  
+                  {/* Menu items fonctionnels */}
                   <div className="dropdown-items" style={{ padding: '0.5rem 0' }}>
+                    <button
+                      className="dropdown-item"
+                      onClick={() => handleDropdownItemClick('game')}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.75rem 1rem',
+                        background: 'none',
+                        border: 'none',
+                        color: '#4a5568',
+                        cursor: 'pointer',
+                        fontSize: '0.95rem',
+                        textAlign: 'left',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f7fafc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      <span className="dropdown-icon">🎮</span>
+                      <span>Jouer Maintenant</span>
+                    </button>
+                    
                     <button
                       className="dropdown-item"
                       onClick={() => handleDropdownItemClick('profile')}
@@ -199,11 +265,38 @@ const Navigation: React.FC = () => {
                         color: '#4a5568',
                         cursor: 'pointer',
                         fontSize: '0.95rem',
-                        textAlign: 'left'
+                        textAlign: 'left',
+                        transition: 'background 0.15s ease'
                       }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f7fafc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
                     >
                       <span className="dropdown-icon">👤</span>
                       <span>Mon Profil</span>
+                    </button>
+                    
+                    <button
+                      className="dropdown-item"
+                      onClick={() => handleDropdownItemClick('tournaments')}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.75rem 1rem',
+                        background: 'none',
+                        border: 'none',
+                        color: '#4a5568',
+                        cursor: 'pointer',
+                        fontSize: '0.95rem',
+                        textAlign: 'left',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f7fafc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      <span className="dropdown-icon">🏆</span>
+                      <span>Mes Tournois</span>
                     </button>
                     
                     <button
@@ -220,37 +313,15 @@ const Navigation: React.FC = () => {
                         color: '#4a5568',
                         cursor: 'pointer',
                         fontSize: '0.95rem',
-                        textAlign: 'left'
+                        textAlign: 'left',
+                        transition: 'background 0.15s ease'
                       }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f7fafc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
                     >
                       <span className="dropdown-icon">⚙️</span>
                       <span>Paramètres</span>
                     </button>
-                    
-                    <div className="dropdown-divider" style={{ height: '1px', background: '#e2e8f0', margin: '0.25rem 0' }}></div>
-                    
-                    <div className="dropdown-stats" style={{ padding: '0.5rem 1rem', background: 'rgba(102, 126, 234, 0.05)' }}>
-                      <div className="stat-item" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0', fontSize: '0.85rem' }}>
-                        <span className="stat-icon">🏆</span>
-                        <span className="stat-text" style={{ color: '#6b7280' }}>
-                          Score: <strong style={{ color: '#667eea' }}>{user.totalScore}</strong>
-                        </span>
-                      </div>
-                      <div className="stat-item" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0', fontSize: '0.85rem' }}>
-                        <span className="stat-icon">🎯</span>
-                        <span className="stat-text" style={{ color: '#6b7280' }}>
-                          Victoires: <strong style={{ color: '#667eea' }}>{user.gamesWon}</strong>
-                        </span>
-                      </div>
-                      {user.totalGames > 0 && (
-                        <div className="stat-item" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0', fontSize: '0.85rem' }}>
-                          <span className="stat-icon">📈</span>
-                          <span className="stat-text" style={{ color: '#6b7280' }}>
-                            Taux: <strong style={{ color: '#667eea' }}>{user.winRate.toFixed(1)}%</strong>
-                          </span>
-                        </div>
-                      )}
-                    </div>
                     
                     <div className="dropdown-divider" style={{ height: '1px', background: '#e2e8f0', margin: '0.25rem 0' }}></div>
                     
@@ -268,8 +339,11 @@ const Navigation: React.FC = () => {
                         color: '#e53e3e',
                         cursor: 'pointer',
                         fontSize: '0.95rem',
-                        textAlign: 'left'
+                        textAlign: 'left',
+                        transition: 'background 0.15s ease'
                       }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(229, 62, 62, 0.1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
                     >
                       <span className="dropdown-icon">🚪</span>
                       <span>Déconnexion</span>
@@ -289,7 +363,8 @@ const Navigation: React.FC = () => {
               border: 'none',
               borderRadius: '6px',
               cursor: 'pointer',
-              fontWeight: '600'
+              fontWeight: '600',
+              transition: 'all 0.2s ease'
             }}>
               <span>🔐</span>
               <span>Se connecter</span>

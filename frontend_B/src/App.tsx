@@ -1,4 +1,4 @@
-// frontend_B/src/App.tsx - AVEC USERPROVIDER AJOUTÉ
+// frontend_B/src/App.tsx - AVEC ROUTE SETTINGS AJOUTÉE
 
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
@@ -10,6 +10,8 @@ import Tournaments from './pages/Tournaments';
 import CreateTournament from './pages/CreateTournament';
 import TournamentDetail from './pages/TournamentDetail';
 import Profile from './pages/Profile';
+import Settings from './pages/Settings';
+import Game from './pages/Game';
 import Leaderboard from './pages/Leaderboard';
 import './App.css';
 
@@ -23,10 +25,12 @@ function App() {
             <main className="main-content">
               <Routes>
                 <Route path="/" element={<Home />} />
+                <Route path="/game" element={<Game />} />
                 <Route path="/tournaments" element={<Tournaments />} />
                 <Route path="/tournaments/:id" element={<TournamentDetail />} />
                 <Route path="/create-tournament" element={<CreateTournament />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/settings" element={<Settings />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />
               </Routes>
             </main>
