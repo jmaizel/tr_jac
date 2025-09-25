@@ -1,608 +1,552 @@
-// frontend_B/src/pages/Settings.tsx - PAGE DES PARAMÈTRES
+// frontend_B/src/pages/Settings.tsx - PAGE PARAMÈTRES UTILISATEUR
 
-import React, { useState } from 'react';
-import { useUser, UpdateProfileData } from '../contexts/UserContext';
+import React, { useState, useEffect } from 'react';
+import { useUser } from '../contexts/UserContext';
+
+interface SettingsForm {
+  username: string;
+  displayName: string;
+  email: string;
+  avatar: string;
+  notifications: {
+    gameInvitations: boolean;
+    tournamentUpdates: boolean;
+    friendRequests: boolean;
+    emailNotifications: boolean;
+  };
+  privacy: {
+    profileVisible: boolean;
+    showOnlineStatus: boolean;
+    allowGameInvitations: boolean;
+  };
+  gamePreferences: {
+    defaultGameMode: 'classic' | 'speed' | 'custom';
+    soundEnabled: boolean;
+    animationsEnabled: boolean;
+  };
+}
+
+interface TwoFASettings {
+  isEnabled: boolean;
+  qrCode?: string;
+  backupCodes?: string[];
+}
 
 const Settings: React.FC = () => {
-  const { user, updateProfile } = useUser();
-  
-  // États du formulaire
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<UpdateProfileData>({
+  const { user, updateUser } = useUser();
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'game'>('profile');
+  const [formData, setFormData] = useState<SettingsForm>({
     username: user?.username || '',
-    email: user?.email || '',
     displayName: user?.displayName || '',
-    avatar: user?.avatar || '',
+    email: user?.email || '',
+    avatar: user?.avatar || '😀',
+    notifications: {
+      gameInvitations: true,
+      tournamentUpdates: true,
+      friendRequests: true,
+      emailNotifications: false
+    },
+    privacy: {
+      profileVisible: true,
+      showOnlineStatus: true,
+      allowGameInvitations: true
+    },
+    gamePreferences: {
+      defaultGameMode: 'classic',
+      soundEnabled: true,
+      animationsEnabled: true
+    }
   });
 
-  // État pour les préférences
-  const [preferences, setPreferences] = useState({
-    language: 'fr',
-    theme: 'light',
-    notifications: true,
-    soundEnabled: true,
-    emailUpdates: false,
+  const [twoFA, setTwoFA] = useState<TwoFASettings>({
+    isEnabled: false
   });
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
 
-  if (!user) {
-    return (
-      <div>
-        <section className="page-header">
-          <div className="container">
-            <h1 className="page-title">⚙️ Paramètres</h1>
-            <p className="page-subtitle">Vous devez être connecté pour accéder aux paramètres</p>
-          </div>
-        </section>
-      </div>
-    );
-  }
+  // Avatars disponibles
+  const availableAvatars = ['😀', '😎', '🎮', '🕹️', '👤', '🎯', '🏆', '⚡', '🔥', '💎', '🎪', '🎨'];
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  // Gestion des changements
+  const handleChange = (section: keyof SettingsForm, field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [section]: typeof prev[section] === 'object' 
+        ? { ...prev[section], [field]: value }
+        : value
+    }));
   };
 
-  const handlePreferenceChange = (key: string, value: any) => {
-    setPreferences(prev => ({ ...prev, [key]: value }));
+  // Sauvegarde des paramètres
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setMessage(null);
+
+    try {
+      // TODO: Appel API backend pour sauvegarder
+      console.log('Saving settings:', formData);
+      
+      // Simulation
+      setTimeout(() => {
+        setMessage({ type: 'success', text: 'Paramètres sauvegardés avec succès !' });
+        setIsLoading(false);
+        
+        // Mise à jour du context utilisateur
+        updateUser({
+          ...user!,
+          username: formData.username,
+          displayName: formData.displayName,
+          avatar: formData.avatar
+        });
+      }, 1000);
+
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Erreur lors de la sauvegarde.' });
+      setIsLoading(false);
+    }
   };
 
-  const handleSave = () => {
-    updateProfile(formData);
-    setIsEditing(false);
-    console.log('💾 Préférences sauvegardées:', preferences);
-    // TODO: Sauvegarder les préférences dans le backend
+  // Activation/désactivation 2FA
+  const toggle2FA = async () => {
+    setIsLoading(true);
+
+    try {
+      if (!twoFA.isEnabled) {
+        // Activation 2FA - générer QR code
+        console.log('Enabling 2FA...');
+        setTimeout(() => {
+          setTwoFA({
+            isEnabled: true,
+            qrCode: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUGAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // QR code simulé
+            backupCodes: ['ABC123', 'DEF456', 'GHI789', 'JKL012']
+          });
+          setMessage({ type: 'success', text: '2FA activé ! Scannez le QR code avec votre app.' });
+          setIsLoading(false);
+        }, 1000);
+      } else {
+        // Désactivation 2FA
+        console.log('Disabling 2FA...');
+        setTimeout(() => {
+          setTwoFA({ isEnabled: false });
+          setMessage({ type: 'success', text: '2FA désactivé.' });
+          setIsLoading(false);
+        }, 1000);
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Erreur lors de la configuration 2FA.' });
+      setIsLoading(false);
+    }
   };
 
-  const handleCancel = () => {
-    setFormData({
-      username: user.username,
-      email: user.email,
-      displayName: user.displayName || '',
-      avatar: user.avatar || '',
-    });
-    setIsEditing(false);
-  };
+  const tabs = [
+    { id: 'profile', label: '👤 Profil', icon: '👤' },
+    { id: 'security', label: '🔒 Sécurité', icon: '🔒' },
+    { id: 'notifications', label: '🔔 Notifications', icon: '🔔' },
+    { id: 'game', label: '🎮 Jeu', icon: '🎮' }
+  ] as const;
 
   return (
-    <div>
-      {/* Header */}
-      <section className="page-header" style={{
-        background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
-        color: 'white',
-        padding: '3rem 0',
-        textAlign: 'center'
-      }}>
-        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem' }}>
-          <h1 className="page-title" style={{ fontSize: '2.5rem', fontWeight: '700', marginBottom: '0.5rem' }}>
-            ⚙️ Paramètres
-          </h1>
-          <p className="page-subtitle" style={{ fontSize: '1.1rem', opacity: '0.9' }}>
+    <div className="settings-page">
+      <div className="page-header">
+        <div className="container">
+          <h1 className="page-title">⚙️ Paramètres</h1>
+          <p className="page-subtitle">
             Personnalisez votre expérience Transcendence
           </p>
         </div>
-      </section>
+      </div>
 
-      {/* Contenu principal */}
-      <section style={{ padding: '3rem 0' }}>
-        <div className="container" style={{ maxWidth: '800px', margin: '0 auto', padding: '0 1rem' }}>
+      <div className="container">
+        {/* Messages */}
+        {message && (
+          <div style={{
+            background: message.type === 'success' 
+              ? 'rgba(16, 185, 129, 0.1)' 
+              : 'rgba(239, 68, 68, 0.1)',
+            color: message.type === 'success' ? 'var(--success)' : 'var(--danger)',
+            padding: '0.75rem',
+            borderRadius: '6px',
+            marginBottom: '1.5rem',
+            textAlign: 'center'
+          }}>
+            {message.text}
+          </div>
+        )}
+
+        <div className="settings-layout" style={{
+          display: 'grid',
+          gridTemplateColumns: '250px 1fr',
+          gap: '2rem'
+        }}>
           
-          {/* Section Profil */}
-          <div className="settings-section" style={{
-            background: 'white',
-            borderRadius: '12px',
-            padding: '2rem',
-            marginBottom: '2rem',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-            border: '1px solid #e2e8f0'
-          }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1.5rem', color: '#2d3748' }}>
-              👤 Informations du profil
-            </h2>
-            
-            <div style={{ display: 'grid', gap: '1.5rem' }}>
-              {/* Avatar */}
-              <div>
-                <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: '#4a5568' }}>
-                  Avatar
-                </label>
-                {isEditing ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {/* Navigation des onglets */}
+          <div className="settings-nav">
+            <div className="card" style={{ padding: '1rem' }}>
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`settings-tab ${activeTab === tab.id ? 'active' : ''}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: 'none',
+                    borderRadius: '6px',
+                    marginBottom: '0.5rem',
+                    cursor: 'pointer',
+                    fontWeight: activeTab === tab.id ? 'bold' : 'normal',
+                    background: activeTab === tab.id ? 'var(--primary)' : 'transparent',
+                    color: activeTab === tab.id ? 'white' : 'var(--gray-700)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <span style={{ fontSize: '1.2rem' }}>{tab.icon}</span>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Contenu des onglets */}
+          <div className="settings-content">
+            <form onSubmit={handleSave}>
+              
+              {/* ONGLET PROFIL */}
+              {activeTab === 'profile' && (
+                <div className="card">
+                  <h2 style={{ marginBottom: '2rem' }}>👤 Informations du profil</h2>
+                  
+                  {/* Avatar */}
+                  <div className="form-group">
+                    <label className="form-label">Avatar</label>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                      {availableAvatars.map(avatar => (
+                        <button
+                          key={avatar}
+                          type="button"
+                          onClick={() => handleChange('avatar', '', avatar)}
+                          style={{
+                            padding: '0.5rem',
+                            border: formData.avatar === avatar ? '3px solid var(--primary)' : '2px solid var(--gray-300)',
+                            borderRadius: '8px',
+                            background: 'white',
+                            fontSize: '2rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {avatar}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Nom d'utilisateur */}
+                  <div className="form-group">
+                    <label htmlFor="username" className="form-label">
+                      Nom d'utilisateur
+                    </label>
                     <input
-                      type="text"
-                      name="avatar"
-                      value={formData.avatar}
-                      onChange={handleInputChange}
-                      placeholder="Emoji ou URL"
-                      style={{
-                        flex: '1',
-                        padding: '0.75rem',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '6px',
-                        fontSize: '1rem'
-                      }}
+                      id="username"
+                      className="input"
+                      value={formData.username}
+                      onChange={(e) => handleChange('username', '', e.target.value)}
+                      placeholder="Votre nom d'utilisateur"
                     />
-                    <div style={{
-                      width: '48px',
-                      height: '48px',
-                      background: '#667eea',
-                      color: 'white',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '1.5rem'
+                  </div>
+
+                  {/* Nom d'affichage */}
+                  <div className="form-group">
+                    <label htmlFor="displayName" className="form-label">
+                      Nom d'affichage
+                    </label>
+                    <input
+                      id="displayName"
+                      className="input"
+                      value={formData.displayName}
+                      onChange={(e) => handleChange('displayName', '', e.target.value)}
+                      placeholder="Comment vous voulez apparaître"
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div className="form-group">
+                    <label htmlFor="email" className="form-label">
+                      Adresse email
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      className="input"
+                      value={formData.email}
+                      onChange={(e) => handleChange('email', '', e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ONGLET SÉCURITÉ */}
+              {activeTab === 'security' && (
+                <div className="card">
+                  <h2 style={{ marginBottom: '2rem' }}>🔒 Sécurité du compte</h2>
+                  
+                  {/* Changement de mot de passe */}
+                  <div style={{ marginBottom: '2rem' }}>
+                    <h3 style={{ marginBottom: '1rem' }}>Mot de passe</h3>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setShowPasswordChange(!showPasswordChange)}
+                    >
+                      🔑 Changer le mot de passe
+                    </button>
+                    
+                    {showPasswordChange && (
+                      <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--gray-100)', borderRadius: '8px' }}>
+                        <div className="form-group">
+                          <label className="form-label">Mot de passe actuel</label>
+                          <input type="password" className="input" placeholder="••••••••" />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Nouveau mot de passe</label>
+                          <input type="password" className="input" placeholder="••••••••" />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Confirmer le nouveau mot de passe</label>
+                          <input type="password" className="input" placeholder="••••••••" />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button type="button" className="btn btn-success">✅ Confirmer</button>
+                          <button 
+                            type="button" 
+                            className="btn btn-secondary"
+                            onClick={() => setShowPasswordChange(false)}
+                          >
+                            ❌ Annuler
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Authentification 2FA */}
+                  <div>
+                    <h3 style={{ marginBottom: '1rem' }}>Authentification à deux facteurs (2FA)</h3>
+                    <div style={{ 
+                      padding: '1rem', 
+                      background: twoFA.isEnabled ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255, 193, 7, 0.1)', 
+                      borderRadius: '8px',
+                      marginBottom: '1rem'
                     }}>
-                      {formData.avatar || '👤'}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                        <span style={{ fontSize: '2rem' }}>
+                          {twoFA.isEnabled ? '🔒' : '🔓'}
+                        </span>
+                        <div>
+                          <div style={{ fontWeight: 'bold' }}>
+                            2FA {twoFA.isEnabled ? 'Activé' : 'Désactivé'}
+                          </div>
+                          <div style={{ fontSize: '0.9rem', color: 'var(--gray-600)' }}>
+                            {twoFA.isEnabled 
+                              ? 'Votre compte est sécurisé avec 2FA' 
+                              : 'Activez 2FA pour plus de sécurité'
+                            }
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <button
+                        type="button"
+                        className={`btn ${twoFA.isEnabled ? 'btn-danger' : 'btn-success'}`}
+                        onClick={toggle2FA}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? '⏳ Configuration...' : 
+                         twoFA.isEnabled ? '❌ Désactiver 2FA' : '✅ Activer 2FA'}
+                      </button>
+
+                      {/* QR Code pour activation 2FA */}
+                      {twoFA.isEnabled && twoFA.qrCode && (
+                        <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                          <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+                            📱 Scannez ce QR code avec votre application d'authentification :
+                          </p>
+                          <div style={{ 
+                            width: '200px', 
+                            height: '200px', 
+                            background: '#f0f0f0', 
+                            margin: '0 auto',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '2px dashed var(--gray-400)',
+                            borderRadius: '8px'
+                          }}>
+                            📱 QR Code
+                          </div>
+                          
+                          {twoFA.backupCodes && (
+                            <div style={{ marginTop: '1rem' }}>
+                              <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                                🔑 Codes de secours (sauvegardez-les) :
+                              </p>
+                              <div style={{ 
+                                display: 'grid', 
+                                gridTemplateColumns: 'repeat(2, 1fr)', 
+                                gap: '0.25rem',
+                                fontSize: '0.8rem',
+                                fontFamily: 'monospace'
+                              }}>
+                                {twoFA.backupCodes.map((code, index) => (
+                                  <span key={index} style={{ 
+                                    background: 'white', 
+                                    padding: '0.25rem',
+                                    borderRadius: '4px'
+                                  }}>
+                                    {code}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div style={{
-                      width: '48px',
-                      height: '48px',
-                      background: '#667eea',
-                      color: 'white',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '1.5rem'
+                </div>
+              )}
+
+              {/* ONGLET NOTIFICATIONS */}
+              {activeTab === 'notifications' && (
+                <div className="card">
+                  <h2 style={{ marginBottom: '2rem' }}>🔔 Préférences de notifications</h2>
+                  
+                  {Object.entries(formData.notifications).map(([key, value]) => (
+                    <div key={key} style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      padding: '1rem',
+                      background: 'var(--gray-100)',
+                      borderRadius: '8px',
+                      marginBottom: '1rem'
                     }}>
-                      {user.avatar || '👤'}
+                      <div>
+                        <div style={{ fontWeight: 'bold' }}>
+                          {key === 'gameInvitations' && '🎮 Invitations de jeu'}
+                          {key === 'tournamentUpdates' && '🏆 Mises à jour des tournois'}
+                          {key === 'friendRequests' && '👥 Demandes d\'amis'}
+                          {key === 'emailNotifications' && '📧 Notifications par email'}
+                        </div>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--gray-600)' }}>
+                          {key === 'gameInvitations' && 'Recevoir les invitations de partie'}
+                          {key === 'tournamentUpdates' && 'Être notifié des tournois'}
+                          {key === 'friendRequests' && 'Notifications d\'amis'}
+                          {key === 'emailNotifications' && 'Recevoir des emails'}
+                        </div>
+                      </div>
+                      <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={value}
+                          onChange={(e) => handleChange('notifications', key, e.target.checked)}
+                          style={{ marginRight: '0.5rem' }}
+                        />
+                        <span>{value ? '✅' : '❌'}</span>
+                      </label>
                     </div>
-                    <span style={{ color: '#4a5568' }}>{user.avatar || 'Aucun avatar'}</span>
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
 
-              {/* Nom d'utilisateur */}
-              <div>
-                <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: '#4a5568' }}>
-                  Nom d'utilisateur
-                </label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '6px',
-                      fontSize: '1rem'
-                    }}
-                  />
-                ) : (
-                  <span style={{ color: '#4a5568' }}>{user.username}</span>
-                )}
-              </div>
-
-              {/* Nom d'affichage */}
-              <div>
-                <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: '#4a5568' }}>
-                  Nom d'affichage
-                </label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="displayName"
-                    value={formData.displayName}
-                    onChange={handleInputChange}
-                    placeholder="Nom complet ou surnom"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '6px',
-                      fontSize: '1rem'
-                    }}
-                  />
-                ) : (
-                  <span style={{ color: '#4a5568' }}>{user.displayName || 'Non défini'}</span>
-                )}
-              </div>
-
-              {/* Email */}
-              <div>
-                <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: '#4a5568' }}>
-                  Email
-                </label>
-                {isEditing ? (
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '6px',
-                      fontSize: '1rem'
-                    }}
-                  />
-                ) : (
-                  <span style={{ color: '#4a5568' }}>{user.email}</span>
-                )}
-              </div>
-
-              {/* Boutons */}
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                {isEditing ? (
-                  <>
-                    <button
-                      onClick={handleSave}
-                      style={{
-                        padding: '0.75rem 1.5rem',
-                        background: '#667eea',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        transition: 'background 0.2s'
-                      }}
+              {/* ONGLET JEU */}
+              {activeTab === 'game' && (
+                <div className="card">
+                  <h2 style={{ marginBottom: '2rem' }}>🎮 Préférences de jeu</h2>
+                  
+                  <div className="form-group">
+                    <label className="form-label">Mode de jeu par défaut</label>
+                    <select
+                      className="input"
+                      value={formData.gamePreferences.defaultGameMode}
+                      onChange={(e) => handleChange('gamePreferences', 'defaultGameMode', e.target.value)}
                     >
-                      💾 Sauvegarder
-                    </button>
-                    <button
-                      onClick={handleCancel}
-                      style={{
-                        padding: '0.75rem 1.5rem',
-                        background: '#e2e8f0',
-                        color: '#4a5568',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        transition: 'background 0.2s'
-                      }}
-                    >
-                      ❌ Annuler
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    style={{
-                      padding: '0.75rem 1.5rem',
-                      background: '#667eea',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      transition: 'background 0.2s'
-                    }}
-                  >
-                    ✏️ Modifier
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+                      <option value="classic">🎯 Classique</option>
+                      <option value="speed">⚡ Rapide</option>
+                      <option value="custom">⚙️ Personnalisé</option>
+                    </select>
+                  </div>
 
-          {/* Section Préférences */}
-          <div className="settings-section" style={{
-            background: 'white',
-            borderRadius: '12px',
-            padding: '2rem',
-            marginBottom: '2rem',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-            border: '1px solid #e2e8f0'
-          }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1.5rem', color: '#2d3748' }}>
-              🎨 Préférences
-            </h2>
-            
-            <div style={{ display: 'grid', gap: '1.5rem' }}>
-              {/* Langue */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <strong style={{ color: '#4a5568' }}>🌍 Langue</strong>
-                  <div style={{ fontSize: '0.9rem', color: '#718096' }}>Langue de l'interface</div>
+                  <div style={{ marginTop: '2rem' }}>
+                    <h3 style={{ marginBottom: '1rem' }}>Options d'affichage</h3>
+                    
+                    {Object.entries(formData.gamePreferences).slice(1).map(([key, value]) => (
+                      <div key={key} style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between',
+                        padding: '1rem',
+                        background: 'var(--gray-100)',
+                        borderRadius: '8px',
+                        marginBottom: '1rem'
+                      }}>
+                        <div>
+                          <div style={{ fontWeight: 'bold' }}>
+                            {key === 'soundEnabled' && '🔊 Sons activés'}
+                            {key === 'animationsEnabled' && '✨ Animations activées'}
+                          </div>
+                          <div style={{ fontSize: '0.9rem', color: 'var(--gray-600)' }}>
+                            {key === 'soundEnabled' && 'Effets sonores du jeu'}
+                            {key === 'animationsEnabled' && 'Effets visuels et animations'}
+                          </div>
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={value as boolean}
+                            onChange={(e) => handleChange('gamePreferences', key, e.target.checked)}
+                            style={{ marginRight: '0.5rem' }}
+                          />
+                          <span>{value ? '✅' : '❌'}</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <select
-                  value={preferences.language}
-                  onChange={(e) => handlePreferenceChange('language', e.target.value)}
-                  style={{
-                    padding: '0.5rem',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    background: 'white'
-                  }}
+              )}
+
+              {/* Boutons de sauvegarde */}
+              <div className="settings-actions" style={{ 
+                marginTop: '2rem',
+                display: 'flex',
+                gap: '1rem',
+                justifyContent: 'flex-end'
+              }}>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => window.location.reload()}
                 >
-                  <option value="fr">🇫🇷 Français</option>
-                  <option value="en">🇺🇸 English</option>
-                </select>
-              </div>
-
-              {/* Thème */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <strong style={{ color: '#4a5568' }}>🎨 Thème</strong>
-                  <div style={{ fontSize: '0.9rem', color: '#718096' }}>Apparence de l'interface</div>
-                </div>
-                <select
-                  value={preferences.theme}
-                  onChange={(e) => handlePreferenceChange('theme', e.target.value)}
-                  style={{
-                    padding: '0.5rem',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    background: 'white'
-                  }}
+                  🔄 Annuler
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={isLoading}
                 >
-                  <option value="light">☀️ Clair</option>
-                  <option value="dark">🌙 Sombre</option>
-                  <option value="auto">🔄 Automatique</option>
-                </select>
+                  {isLoading ? '⏳ Sauvegarde...' : '💾 Sauvegarder'}
+                </button>
               </div>
-
-              {/* Notifications */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <strong style={{ color: '#4a5568' }}>🔔 Notifications</strong>
-                  <div style={{ fontSize: '0.9rem', color: '#718096' }}>Recevoir des notifications push</div>
-                </div>
-                <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '24px' }}>
-                  <input
-                    type="checkbox"
-                    checked={preferences.notifications}
-                    onChange={(e) => handlePreferenceChange('notifications', e.target.checked)}
-                    style={{ opacity: 0, width: 0, height: 0 }}
-                  />
-                  <span style={{
-                    position: 'absolute',
-                    cursor: 'pointer',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: preferences.notifications ? '#667eea' : '#ccc',
-                    borderRadius: '24px',
-                    transition: '0.4s',
-                  }}>
-                    <span style={{
-                      position: 'absolute',
-                      content: '',
-                      height: '18px',
-                      width: '18px',
-                      left: preferences.notifications ? '29px' : '3px',
-                      bottom: '3px',
-                      background: 'white',
-                      borderRadius: '50%',
-                      transition: '0.4s',
-                    }}></span>
-                  </span>
-                </label>
-              </div>
-
-              {/* Sons */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <strong style={{ color: '#4a5568' }}>🔊 Sons</strong>
-                  <div style={{ fontSize: '0.9rem', color: '#718096' }}>Activer les effets sonores</div>
-                </div>
-                <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '24px' }}>
-                  <input
-                    type="checkbox"
-                    checked={preferences.soundEnabled}
-                    onChange={(e) => handlePreferenceChange('soundEnabled', e.target.checked)}
-                    style={{ opacity: 0, width: 0, height: 0 }}
-                  />
-                  <span style={{
-                    position: 'absolute',
-                    cursor: 'pointer',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: preferences.soundEnabled ? '#667eea' : '#ccc',
-                    borderRadius: '24px',
-                    transition: '0.4s',
-                  }}>
-                    <span style={{
-                      position: 'absolute',
-                      content: '',
-                      height: '18px',
-                      width: '18px',
-                      left: preferences.soundEnabled ? '29px' : '3px',
-                      bottom: '3px',
-                      background: 'white',
-                      borderRadius: '50%',
-                      transition: '0.4s',
-                    }}></span>
-                  </span>
-                </label>
-              </div>
-
-              {/* Emails */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <strong style={{ color: '#4a5568' }}>📧 Emails</strong>
-                  <div style={{ fontSize: '0.9rem', color: '#718096' }}>Recevoir les mises à jour par email</div>
-                </div>
-                <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '24px' }}>
-                  <input
-                    type="checkbox"
-                    checked={preferences.emailUpdates}
-                    onChange={(e) => handlePreferenceChange('emailUpdates', e.target.checked)}
-                    style={{ opacity: 0, width: 0, height: 0 }}
-                  />
-                  <span style={{
-                    position: 'absolute',
-                    cursor: 'pointer',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: preferences.emailUpdates ? '#667eea' : '#ccc',
-                    borderRadius: '24px',
-                    transition: '0.4s',
-                  }}>
-                    <span style={{
-                      position: 'absolute',
-                      content: '',
-                      height: '18px',
-                      width: '18px',
-                      left: preferences.emailUpdates ? '29px' : '3px',
-                      bottom: '3px',
-                      background: 'white',
-                      borderRadius: '50%',
-                      transition: '0.4s',
-                    }}></span>
-                  </span>
-                </label>
-              </div>
-            </div>
+            </form>
           </div>
-
-          {/* Section Sécurité */}
-          <div className="settings-section" style={{
-            background: 'white',
-            borderRadius: '12px',
-            padding: '2rem',
-            marginBottom: '2rem',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-            border: '1px solid #e2e8f0'
-          }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1.5rem', color: '#2d3748' }}>
-              🔒 Sécurité
-            </h2>
-            
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              <div style={{
-                padding: '1rem',
-                background: '#f7fafc',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong style={{ color: '#4a5568' }}>🔐 Authentification à deux facteurs</strong>
-                    <div style={{ fontSize: '0.9rem', color: '#718096' }}>Ajoutez une couche de sécurité supplémentaire</div>
-                  </div>
-                  <button style={{
-                    padding: '0.5rem 1rem',
-                    background: '#667eea',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    fontWeight: '600'
-                  }}>
-                    Configurer
-                  </button>
-                </div>
-              </div>
-
-              <div style={{
-                padding: '1rem',
-                background: '#f7fafc',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong style={{ color: '#4a5568' }}>🔑 Changer le mot de passe</strong>
-                    <div style={{ fontSize: '0.9rem', color: '#718096' }}>Modifiez votre mot de passe actuel</div>
-                  </div>
-                  <button style={{
-                    padding: '0.5rem 1rem',
-                    background: '#e2e8f0',
-                    color: '#4a5568',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    fontWeight: '600'
-                  }}>
-                    Modifier
-                  </button>
-                </div>
-              </div>
-
-              <div style={{
-                padding: '1rem',
-                background: '#fed7d7',
-                borderRadius: '8px',
-                border: '1px solid #feb2b2'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong style={{ color: '#c53030' }}>🗑️ Supprimer le compte</strong>
-                    <div style={{ fontSize: '0.9rem', color: '#9b2c2c' }}>Cette action est irréversible</div>
-                  </div>
-                  <button style={{
-                    padding: '0.5rem 1rem',
-                    background: '#e53e3e',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    fontWeight: '600'
-                  }}>
-                    Supprimer
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section Statistiques */}
-          <div className="settings-section" style={{
-            background: 'white',
-            borderRadius: '12px',
-            padding: '2rem',
-            marginBottom: '2rem',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-            border: '1px solid #e2e8f0'
-          }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1.5rem', color: '#2d3748' }}>
-              📊 Statistiques du compte
-            </h2>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-              <div style={{ textAlign: 'center', padding: '1rem', background: '#f7fafc', borderRadius: '8px' }}>
-                <div style={{ fontSize: '2rem', fontWeight: '700', color: '#667eea' }}>{user.totalGames}</div>
-                <div style={{ fontSize: '0.9rem', color: '#718096' }}>Parties jouées</div>
-              </div>
-              
-              <div style={{ textAlign: 'center', padding: '1rem', background: '#f7fafc', borderRadius: '8px' }}>
-                <div style={{ fontSize: '2rem', fontWeight: '700', color: '#48bb78' }}>{user.gamesWon}</div>
-                <div style={{ fontSize: '0.9rem', color: '#718096' }}>Victoires</div>
-              </div>
-              
-              <div style={{ textAlign: 'center', padding: '1rem', background: '#f7fafc', borderRadius: '8px' }}>
-                <div style={{ fontSize: '2rem', fontWeight: '700', color: '#ed8936' }}>{user.winRate.toFixed(1)}%</div>
-                <div style={{ fontSize: '0.9rem', color: '#718096' }}>Taux de victoire</div>
-              </div>
-              
-              <div style={{ textAlign: 'center', padding: '1rem', background: '#f7fafc', borderRadius: '8px' }}>
-                <div style={{ fontSize: '2rem', fontWeight: '700', color: '#9f7aea' }}>{user.totalScore}</div>
-                <div style={{ fontSize: '0.9rem', color: '#718096' }}>Score total</div>
-              </div>
-            </div>
-
-            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-              <p style={{ fontSize: '0.9rem', color: '#718096' }}>
-                Membre depuis le {new Date(user.createdAt).toLocaleDateString('fr-FR', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </p>
-            </div>
-          </div>
-
         </div>
-      </section>
+      </div>
     </div>
   );
 };
