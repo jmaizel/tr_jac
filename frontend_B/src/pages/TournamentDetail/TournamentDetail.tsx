@@ -1,8 +1,8 @@
-// frontend_B/src/pages/TournamentDetail.tsx - VERSION PROPRE PRÊTE BACKEND
-
+// frontend_B/src/pages/TournamentDetail/TournamentDetail.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { tournamentAPI } from '../services/api';
+import { tournamentAPI } from '../../services/api';
+import './TournamentDetail.css';
 
 interface Tournament {
   id: number;
@@ -35,9 +35,8 @@ const TournamentDetail: React.FC = () => {
   const [isLeaving, setIsLeaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  // Vérifier si l'utilisateur est participant
-  const [isParticipant, setIsParticipant] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string>(''); // À récupérer du context user
+  const [isParticipant] = useState(false);
+  const [currentUserId] = useState<string>('');
 
   useEffect(() => {
     const fetchTournament = async () => {
@@ -47,9 +46,6 @@ const TournamentDetail: React.FC = () => {
         setIsLoading(true);
         const response = await tournamentAPI.getTournament(parseInt(id));
         setTournament(response.data);
-        
-        // TODO: Récupérer l'ID utilisateur actuel depuis le context
-        // setIsParticipant(response.data.participants.some(p => p.id === currentUserId));
       } catch (err: any) {
         setError(err.response?.data?.message || 'Erreur de chargement');
       } finally {
@@ -70,10 +66,8 @@ const TournamentDetail: React.FC = () => {
       await tournamentAPI.joinTournament(tournament.id);
       setMessage({ type: 'success', text: 'Vous avez rejoint le tournoi !' });
       
-      // Recharger les données
       const response = await tournamentAPI.getTournament(tournament.id);
       setTournament(response.data);
-      setIsParticipant(true);
     } catch (err: any) {
       setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur lors de l\'inscription' });
     } finally {
@@ -91,10 +85,8 @@ const TournamentDetail: React.FC = () => {
       await tournamentAPI.leaveTournament(tournament.id);
       setMessage({ type: 'success', text: 'Vous avez quitté le tournoi' });
       
-      // Recharger les données
       const response = await tournamentAPI.getTournament(tournament.id);
       setTournament(response.data);
-      setIsParticipant(false);
     } catch (err: any) {
       setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur lors du départ' });
     } finally {
@@ -109,7 +101,6 @@ const TournamentDetail: React.FC = () => {
       await tournamentAPI.startTournament(tournament.id);
       setMessage({ type: 'success', text: 'Tournoi démarré !' });
       
-      // Recharger
       const response = await tournamentAPI.getTournament(tournament.id);
       setTournament(response.data);
     } catch (err: any) {
@@ -137,8 +128,8 @@ const TournamentDetail: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="container" style={{ textAlign: 'center', paddingTop: '3rem' }}>
-        <div style={{ fontSize: '3rem' }}>⏳</div>
+      <div className="tournament-loading">
+        <div className="loading-icon">⏳</div>
         <p>Chargement du tournoi...</p>
       </div>
     );
@@ -146,13 +137,12 @@ const TournamentDetail: React.FC = () => {
 
   if (error || !tournament) {
     return (
-      <div className="container" style={{ textAlign: 'center', paddingTop: '3rem' }}>
-        <div style={{ fontSize: '3rem', color: 'var(--danger)' }}>⚠️</div>
-        <p style={{ color: 'var(--danger)' }}>{error || 'Tournoi introuvable'}</p>
+      <div className="tournament-error">
+        <div className="error-icon">⚠️</div>
+        <p className="error-message">{error || 'Tournoi introuvable'}</p>
         <button 
           className="btn btn-secondary" 
           onClick={() => navigate('/tournaments')}
-          style={{ marginTop: '1rem' }}
         >
           ← Retour aux tournois
         </button>
@@ -170,21 +160,20 @@ const TournamentDetail: React.FC = () => {
     <div className="tournament-detail-page">
       <div className="page-header">
         <div className="container">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+          <div className="tournament-detail-header">
             <div>
               <h1 className="page-title">{tournament.name}</h1>
               <p className="page-subtitle">
                 Par {tournament.creator.username} • {getTypeName(tournament.type)}
               </p>
             </div>
-            <span style={{ 
-              padding: '0.5rem 1rem', 
-              borderRadius: '20px',
-              fontSize: '1rem',
-              fontWeight: 'bold',
-              background: `${statusBadge.color}20`,
-              color: statusBadge.color
-            }}>
+            <span 
+              className="tournament-status-badge"
+              style={{ 
+                background: `${statusBadge.color}20`,
+                color: statusBadge.color
+              }}
+            >
               {statusBadge.text}
             </span>
           </div>
@@ -193,98 +182,76 @@ const TournamentDetail: React.FC = () => {
 
       <div className="container">
         {message && (
-          <div style={{
-            background: message.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-            color: message.type === 'success' ? 'var(--success)' : 'var(--danger)',
-            padding: '0.75rem',
-            borderRadius: '6px',
-            marginBottom: '1.5rem',
-            textAlign: 'center'
-          }}>
+          <div className={`tournament-message tournament-message-${message.type}`}>
             {message.text}
           </div>
         )}
 
         <div className="grid grid-2">
-          {/* Informations */}
+          
           <div className="card">
-            <h2 style={{ marginBottom: '1.5rem' }}>📋 Informations</h2>
+            <h2 className="detail-section-title">📋 Informations</h2>
             
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Description</h3>
-              <p style={{ color: 'var(--gray-700)' }}>
+            <div className="detail-info">
+              <h3 className="info-subtitle">Description</h3>
+              <p className="info-text">
                 {tournament.description || 'Pas de description'}
               </p>
             </div>
 
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Participants</h3>
-              <div style={{ marginBottom: '0.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+            <div className="detail-info">
+              <h3 className="info-subtitle">Participants</h3>
+              <div className="participant-progress">
+                <div className="progress-info">
                   <span>{tournament.currentParticipants}/{tournament.maxParticipants} inscrits</span>
-                  <span style={{ 
-                    fontWeight: 'bold',
-                    color: isFull ? 'var(--danger)' : 'var(--success)'
-                  }}>
+                  <span className={`progress-status ${isFull ? 'full' : 'available'}`}>
                     {isFull ? '🔴 Complet' : '🟢 Places disponibles'}
                   </span>
                 </div>
               </div>
-              <div style={{ 
-                width: '100%', 
-                height: '12px', 
-                background: 'var(--gray-200)', 
-                borderRadius: '6px',
-                overflow: 'hidden'
-              }}>
-                <div style={{ 
-                  width: `${progress}%`, 
-                  height: '100%', 
-                  background: isFull ? 'var(--danger)' : 'var(--success)',
-                  transition: 'width 0.3s'
-                }}></div>
+              <div className="progress-bar">
+                <div 
+                  className="progress-bar-fill"
+                  style={{ 
+                    width: `${progress}%`,
+                    background: isFull ? 'var(--danger)' : 'var(--success)'
+                  }}
+                ></div>
               </div>
             </div>
 
             {tournament.startDate && (
-              <div style={{ marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Date de début</h3>
-                <p style={{ color: 'var(--gray-700)' }}>
+              <div className="detail-info">
+                <h3 className="info-subtitle">Date de début</h3>
+                <p className="info-text">
                   📅 {new Date(tournament.startDate).toLocaleString('fr-FR')}
                 </p>
               </div>
             )}
 
-            <div>
-              <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Créé le</h3>
-              <p style={{ color: 'var(--gray-700)' }}>
+            <div className="detail-info">
+              <h3 className="info-subtitle">Créé le</h3>
+              <p className="info-text">
                 📅 {new Date(tournament.createdAt).toLocaleString('fr-FR')}
               </p>
             </div>
 
-            {/* Actions */}
-            <div style={{ 
-              marginTop: '2rem', 
-              paddingTop: '1.5rem', 
-              borderTop: '1px solid var(--gray-200)' 
-            }}>
+            <div className="detail-actions">
               {tournament.status === 'pending' && (
                 <>
                   {isParticipant ? (
                     <button
-                      className="btn btn-danger"
+                      className="btn btn-danger btn-full"
                       onClick={handleLeave}
                       disabled={isLeaving}
-                      style={{ width: '100%', marginBottom: '0.5rem' }}
                     >
                       {isLeaving ? '⏳ Départ...' : '🚪 Quitter le tournoi'}
                     </button>
                   ) : (
                     <button
-                      className="btn btn-success"
+                      className="btn btn-success btn-full"
                       onClick={handleJoin}
                       disabled={isJoining || isFull}
-                      style={{ width: '100%', marginBottom: '0.5rem' }}
                     >
                       {isJoining ? '⏳ Inscription...' : isFull ? '🔴 Complet' : '✅ Rejoindre'}
                     </button>
@@ -292,9 +259,8 @@ const TournamentDetail: React.FC = () => {
 
                   {isCreator && canStart && (
                     <button
-                      className="btn btn-primary"
+                      className="btn btn-primary btn-full"
                       onClick={handleStart}
-                      style={{ width: '100%' }}
                     >
                       🚀 Démarrer le tournoi
                     </button>
@@ -303,79 +269,38 @@ const TournamentDetail: React.FC = () => {
               )}
 
               {tournament.status === 'in_progress' && (
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: '1rem', 
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  borderRadius: '6px'
-                }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚔️</div>
-                  <div style={{ fontWeight: 'bold', color: 'var(--success)' }}>
-                    Tournoi en cours
-                  </div>
+                <div className="status-box status-in-progress">
+                  <div className="status-icon">⚔️</div>
+                  <div className="status-text">Tournoi en cours</div>
                 </div>
               )}
 
               {tournament.status === 'completed' && (
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: '1rem', 
-                  background: 'var(--gray-100)',
-                  borderRadius: '6px'
-                }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🏆</div>
-                  <div style={{ fontWeight: 'bold' }}>
-                    Tournoi terminé
-                  </div>
+                <div className="status-box status-completed">
+                  <div className="status-icon">🏆</div>
+                  <div className="status-text">Tournoi terminé</div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Participants */}
           <div className="card">
-            <h2 style={{ marginBottom: '1.5rem' }}>👥 Participants ({tournament.currentParticipants})</h2>
+            <h2 className="detail-section-title">👥 Participants ({tournament.currentParticipants})</h2>
             
             {tournament.participants.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>😕</div>
+              <div className="participants-empty">
+                <div className="empty-icon">😕</div>
                 <p>Aucun participant pour le moment</p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gap: '0.5rem' }}>
+              <div className="participants-list">
                 {tournament.participants.map((participant, index) => (
-                  <div
-                    key={participant.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '1rem',
-                      padding: '0.75rem',
-                      background: 'var(--gray-100)',
-                      borderRadius: '6px'
-                    }}
-                  >
-                    <span style={{ 
-                      fontWeight: 'bold', 
-                      fontSize: '1.2rem',
-                      color: 'var(--gray-500)',
-                      minWidth: '30px'
-                    }}>
-                      #{index + 1}
-                    </span>
-                    <span style={{ fontSize: '1.5rem' }}>{participant.avatar}</span>
-                    <span style={{ fontWeight: 'bold', flex: 1 }}>{participant.username}</span>
+                  <div key={participant.id} className="participant-item">
+                    <span className="participant-rank">#{index + 1}</span>
+                    <span className="participant-avatar">{participant.avatar}</span>
+                    <span className="participant-username">{participant.username}</span>
                     {participant.id === tournament.creator.id && (
-                      <span style={{ 
-                        fontSize: '0.85rem',
-                        padding: '0.25rem 0.5rem',
-                        background: 'var(--primary)',
-                        color: 'white',
-                        borderRadius: '12px',
-                        fontWeight: 'bold'
-                      }}>
-                        👑 Créateur
-                      </span>
+                      <span className="participant-badge">👑 Créateur</span>
                     )}
                   </div>
                 ))}
@@ -384,22 +309,20 @@ const TournamentDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* Brackets (si en cours ou terminé) */}
         {(tournament.status === 'in_progress' || tournament.status === 'completed') && (
-          <div className="card" style={{ marginTop: '2rem' }}>
-            <h2 style={{ marginBottom: '1.5rem' }}>🎯 Brackets</h2>
-            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--gray-600)' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🚧</div>
+          <div className="card tournament-brackets">
+            <h2 className="detail-section-title">🎯 Brackets</h2>
+            <div className="brackets-placeholder">
+              <div className="placeholder-icon">🚧</div>
               <p>Les brackets seront affichés ici</p>
-              <p style={{ fontSize: '0.9rem' }}>
+              <p className="placeholder-info">
                 Fonctionnalité à venir depuis le backend
               </p>
             </div>
           </div>
         )}
 
-        {/* Bouton retour */}
-        <div style={{ marginTop: '2rem' }}>
+        <div className="tournament-back">
           <button 
             className="btn btn-secondary"
             onClick={() => navigate('/tournaments')}

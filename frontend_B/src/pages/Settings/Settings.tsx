@@ -1,7 +1,7 @@
-// frontend_B/src/pages/Settings.tsx - VERSION COMPATIBLE BACKEND
-
+// frontend_B/src/pages/Settings/Settings.tsx
 import React, { useState, useEffect } from 'react';
-import { userAPI, authAPI } from '../services/api';
+import { userAPI, authAPI } from '../../services/api';
+import './Settings.css';
 
 interface UserSettings {
   username: string;
@@ -38,8 +38,6 @@ const Settings: React.FC = () => {
           email: response.data.email,
           avatar: response.data.avatar || '😀'
         });
-        // Note: twoFactorEnabled n'est pas dans ton backend User entity
-        // setTwoFAEnabled(response.data.twoFactorEnabled || false);
       } catch (err: any) {
         setMessage({ type: 'error', text: 'Erreur de chargement' });
       } finally {
@@ -92,8 +90,8 @@ const Settings: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="container" style={{ textAlign: 'center', paddingTop: '3rem' }}>
-        <div style={{ fontSize: '3rem' }}>⏳</div>
+      <div className="settings-loading">
+        <div className="loading-icon">⏳</div>
         <p>Chargement des paramètres...</p>
       </div>
     );
@@ -110,44 +108,19 @@ const Settings: React.FC = () => {
 
       <div className="container">
         {message && (
-          <div style={{
-            background: message.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-            color: message.type === 'success' ? 'var(--success)' : 'var(--danger)',
-            padding: '0.75rem',
-            borderRadius: '6px',
-            marginBottom: '1.5rem',
-            textAlign: 'center'
-          }}>
+          <div className={`settings-message settings-message-${message.type}`}>
             {message.text}
           </div>
         )}
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '250px 1fr',
-          gap: '2rem'
-        }}>
+        <div className="settings-layout">
           
-          <div className="card" style={{ padding: '1rem', height: 'fit-content' }}>
+          <div className="card settings-nav">
             {['profile', 'security'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as any)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: 'none',
-                  borderRadius: '6px',
-                  marginBottom: '0.5rem',
-                  cursor: 'pointer',
-                  fontWeight: activeTab === tab ? 'bold' : 'normal',
-                  background: activeTab === tab ? 'var(--primary)' : 'transparent',
-                  color: activeTab === tab ? 'white' : 'var(--gray-700)',
-                  transition: 'all 0.2s'
-                }}
+                className={`settings-nav-item ${activeTab === tab ? 'active' : ''}`}
               >
                 {tab === 'profile' && '👤 Profil'}
                 {tab === 'security' && '🔒 Sécurité'}
@@ -155,28 +128,21 @@ const Settings: React.FC = () => {
             ))}
           </div>
 
-          <form onSubmit={handleSave}>
+          <form onSubmit={handleSave} className="settings-content">
             
             {activeTab === 'profile' && (
               <div className="card">
-                <h2 style={{ marginBottom: '2rem' }}>👤 Profil</h2>
+                <h2 className="settings-section-title">👤 Profil</h2>
                 
                 <div className="form-group">
                   <label className="form-label">Avatar</label>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div className="avatar-grid">
                     {avatars.map(avatar => (
                       <button
                         key={avatar}
                         type="button"
                         onClick={() => setSettings(prev => ({ ...prev, avatar }))}
-                        style={{
-                          padding: '0.5rem',
-                          border: settings.avatar === avatar ? '3px solid var(--primary)' : '2px solid var(--gray-300)',
-                          borderRadius: '8px',
-                          background: 'white',
-                          fontSize: '2rem',
-                          cursor: 'pointer'
-                        }}
+                        className={`avatar-option ${settings.avatar === avatar ? 'active' : ''}`}
                       >
                         {avatar}
                       </button>
@@ -216,21 +182,16 @@ const Settings: React.FC = () => {
 
             {activeTab === 'security' && (
               <div className="card">
-                <h2 style={{ marginBottom: '2rem' }}>🔒 Sécurité</h2>
+                <h2 className="settings-section-title">🔒 Sécurité</h2>
                 
-                <div style={{ 
-                  padding: '1rem', 
-                  background: twoFAEnabled ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255, 193, 7, 0.1)', 
-                  borderRadius: '8px',
-                  marginBottom: '2rem'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                    <span style={{ fontSize: '2rem' }}>{twoFAEnabled ? '🔒' : '🔓'}</span>
+                <div className={`settings-2fa-box ${twoFAEnabled ? 'enabled' : 'disabled'}`}>
+                  <div className="settings-2fa-header">
+                    <span className="settings-2fa-icon">{twoFAEnabled ? '🔒' : '🔓'}</span>
                     <div>
-                      <div style={{ fontWeight: 'bold' }}>
+                      <div className="settings-2fa-title">
                         2FA {twoFAEnabled ? 'Activé' : 'Désactivé'}
                       </div>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--gray-600)' }}>
+                      <div className="settings-2fa-description">
                         {twoFAEnabled ? 'Compte sécurisé' : 'Activez pour plus de sécurité'}
                       </div>
                     </div>
@@ -246,23 +207,18 @@ const Settings: React.FC = () => {
                   </button>
 
                   {qrCode && (
-                    <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-                      <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                    <div className="settings-2fa-qr">
+                      <p className="settings-2fa-qr-text">
                         📱 Scannez avec votre app :
                       </p>
-                      <img src={qrCode} alt="QR Code 2FA" style={{ maxWidth: '200px' }} />
+                      <img src={qrCode} alt="QR Code 2FA" className="settings-qr-image" />
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            <div style={{ 
-              marginTop: '2rem',
-              display: 'flex',
-              gap: '1rem',
-              justifyContent: 'flex-end'
-            }}>
+            <div className="settings-actions">
               <button type="button" className="btn btn-secondary">
                 🔄 Annuler
               </button>

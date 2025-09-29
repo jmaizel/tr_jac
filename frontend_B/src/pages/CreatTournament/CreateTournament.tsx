@@ -1,8 +1,8 @@
-// frontend_B/src/pages/CreateTournament.tsx - VERSION PROPRE PRÊTE BACKEND
-
+// frontend_B/src/pages/CreateTournament/CreateTournament.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { tournamentAPI } from '../services/api';
+import { tournamentAPI } from '../../services/api';
+import './CreateTournament.css';
 
 interface TournamentForm {
   name: string;
@@ -109,25 +109,17 @@ const CreateTournament: React.FC = () => {
       </div>
 
       <div className="container">
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        <div className="create-tournament-container">
           <form onSubmit={handleSubmit}>
             <div className="card">
-              <h2 style={{ marginBottom: '2rem' }}>📋 Informations du tournoi</h2>
+              <h2 className="form-section-title">📋 Informations du tournoi</h2>
 
               {errors.submit && (
-                <div style={{
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  color: 'var(--danger)',
-                  padding: '0.75rem',
-                  borderRadius: '6px',
-                  marginBottom: '1.5rem',
-                  textAlign: 'center'
-                }}>
+                <div className="form-error-global">
                   {errors.submit}
                 </div>
               )}
 
-              {/* Nom du tournoi */}
               <div className="form-group">
                 <label htmlFor="name" className="form-label">
                   Nom du tournoi *
@@ -141,72 +133,41 @@ const CreateTournament: React.FC = () => {
                   maxLength={50}
                 />
                 {errors.name && (
-                  <span style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>
-                    {errors.name}
-                  </span>
+                  <span className="form-error">{errors.name}</span>
                 )}
-                <div style={{ 
-                  fontSize: '0.85rem', 
-                  color: 'var(--gray-600)', 
-                  marginTop: '0.25rem',
-                  textAlign: 'right' 
-                }}>
+                <div className="form-hint">
                   {formData.name.length}/50
                 </div>
               </div>
 
-              {/* Description */}
               <div className="form-group">
                 <label htmlFor="description" className="form-label">
                   Description (optionnel)
                 </label>
                 <textarea
                   id="description"
-                  className="input"
+                  className="input textarea"
                   value={formData.description}
                   onChange={(e) => handleChange('description', e.target.value)}
                   placeholder="Décrivez votre tournoi..."
                   rows={4}
                   maxLength={200}
-                  style={{ resize: 'vertical', minHeight: '100px' }}
                 />
                 {errors.description && (
-                  <span style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>
-                    {errors.description}
-                  </span>
+                  <span className="form-error">{errors.description}</span>
                 )}
-                <div style={{ 
-                  fontSize: '0.85rem', 
-                  color: 'var(--gray-600)', 
-                  marginTop: '0.25rem',
-                  textAlign: 'right' 
-                }}>
+                <div className="form-hint">
                   {formData.description.length}/200
                 </div>
               </div>
 
-              {/* Type de tournoi */}
               <div className="form-group">
                 <label className="form-label">Type de tournoi *</label>
-                <div style={{ display: 'grid', gap: '1rem' }}>
+                <div className="type-options">
                   {tournamentTypes.map(type => (
                     <label
                       key={type.value}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '1rem',
-                        padding: '1rem',
-                        border: formData.type === type.value 
-                          ? '2px solid var(--primary)' 
-                          : '2px solid var(--gray-300)',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        background: formData.type === type.value 
-                          ? 'rgba(102, 126, 234, 0.05)' 
-                          : 'white'
-                      }}
+                      className={`type-option ${formData.type === type.value ? 'active' : ''}`}
                     >
                       <input
                         type="radio"
@@ -214,22 +175,17 @@ const CreateTournament: React.FC = () => {
                         value={type.value}
                         checked={formData.type === type.value}
                         onChange={(e) => handleChange('type', e.target.value)}
-                        style={{ cursor: 'pointer' }}
+                        className="type-radio"
                       />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>
-                          {type.label}
-                        </div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>
-                          {type.description}
-                        </div>
+                      <div className="type-content">
+                        <div className="type-label">{type.label}</div>
+                        <div className="type-description">{type.description}</div>
                       </div>
                     </label>
                   ))}
                 </div>
               </div>
 
-              {/* Nombre de participants */}
               <div className="form-group">
                 <label htmlFor="maxParticipants" className="form-label">
                   Nombre maximum de participants *
@@ -247,13 +203,10 @@ const CreateTournament: React.FC = () => {
                   ))}
                 </select>
                 {errors.maxParticipants && (
-                  <span style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>
-                    {errors.maxParticipants}
-                  </span>
+                  <span className="form-error">{errors.maxParticipants}</span>
                 )}
               </div>
 
-              {/* Date de début (optionnel) */}
               <div className="form-group">
                 <label htmlFor="startDate" className="form-label">
                   Date de début (optionnel)
@@ -266,44 +219,32 @@ const CreateTournament: React.FC = () => {
                   onChange={(e) => handleChange('startDate', e.target.value)}
                   min={new Date().toISOString().slice(0, 16)}
                 />
-                <div style={{ fontSize: '0.85rem', color: 'var(--gray-600)', marginTop: '0.25rem' }}>
+                <div className="form-hint">
                   Si non spécifiée, le tournoi démarrera dès qu'il sera complet
                 </div>
               </div>
 
-              {/* Récapitulatif */}
-              <div style={{
-                marginTop: '2rem',
-                padding: '1rem',
-                background: 'var(--gray-100)',
-                borderRadius: '8px'
-              }}>
-                <h3 style={{ marginBottom: '1rem' }}>📋 Récapitulatif</h3>
-                <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.9rem' }}>
-                  <div>
-                    <strong>Nom :</strong> {formData.name || <em style={{ color: 'var(--gray-500)' }}>Non défini</em>}
+              <div className="form-summary">
+                <h3 className="summary-title">📋 Récapitulatif</h3>
+                <div className="summary-content">
+                  <div className="summary-item">
+                    <strong>Nom :</strong> {formData.name || <em className="summary-empty">Non défini</em>}
                   </div>
-                  <div>
+                  <div className="summary-item">
                     <strong>Type :</strong> {tournamentTypes.find(t => t.value === formData.type)?.label}
                   </div>
-                  <div>
+                  <div className="summary-item">
                     <strong>Participants :</strong> {formData.maxParticipants} maximum
                   </div>
                   {formData.startDate && (
-                    <div>
+                    <div className="summary-item">
                       <strong>Début :</strong> {new Date(formData.startDate).toLocaleString('fr-FR')}
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Boutons */}
-              <div style={{
-                display: 'flex',
-                gap: '1rem',
-                marginTop: '2rem',
-                justifyContent: 'flex-end'
-              }}>
+              <div className="form-actions">
                 <button
                   type="button"
                   className="btn btn-secondary"

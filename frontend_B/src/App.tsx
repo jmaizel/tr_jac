@@ -7,16 +7,16 @@ import { UserProvider } from './contexts/UserContext';
 import Navigation from './components/Navigation';
 
 // Pages
-import Home from './pages/Home';
-import Tournaments from './pages/Tournaments';
-import CreateTournament from './pages/CreateTournament';
-import TournamentDetail from './pages/TournamentDetail';
-import Profile from './pages/Profile';
-import Leaderboard from './pages/Leaderboard';
-import Game from './pages/Game';
-import Login from './pages/Login';
-import Settings from './pages/Settings';
-import History from './pages/History';
+import Home from './pages/Home/Home';
+import Tournaments from './pages/Tournaments/Tournaments';
+import CreateTournament from './pages/CreatTournament/CreateTournament';
+import TournamentDetail from './pages/TournamentDetail/TournamentDetail';
+import Profile from './pages/Profile/Profile';
+import Leaderboard from './pages/Leaderboard/Leaderboard';
+import Game from './pages/Game/Game';
+import Login from './pages/Login/Login';
+import Settings from './pages/Settings/Settings';
+import History from './pages/History/History';
 
 import './App.css';
 
