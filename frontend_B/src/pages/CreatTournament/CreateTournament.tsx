@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { tournamentAPI } from '../../services/api';
-import './CreateTournament.css';
+import './CreatTournament/CreateTournament.css';
 
 interface TournamentForm {
   name: string;
