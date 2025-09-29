@@ -1,211 +1,237 @@
-// frontend_B/src/pages/Tournaments.tsx - VERSION CORRIGÉE AVEC CONTEXT
+// frontend_B/src/pages/Tournaments.tsx - VERSION PROPRE PRÊTE BACKEND
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useTournaments } from '../contexts/TournamentContext';
+import { tournamentAPI } from '../services/api';
+
+interface Tournament {
+  id: number;
+  name: string;
+  description: string;
+  type: 'single_elimination' | 'double_elimination' | 'round_robin';
+  status: 'pending' | 'in_progress' | 'completed';
+  maxParticipants: number;
+  currentParticipants: number;
+  createdAt: string;
+  startDate?: string;
+  creator: {
+    username: string;
+  };
+}
 
 const Tournaments: React.FC = () => {
-  const { tournaments, joinTournament } = useTournaments();
-  const [filter, setFilter] = useState<'all' | 'open' | 'in_progress' | 'completed'>('all');
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'open': return 'var(--success)';
-      case 'in_progress': return 'var(--warning)';
-      case 'completed': return 'var(--gray-500)';
-      case 'full': return 'var(--danger)';
-      default: return 'var(--gray-500)';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'draft': return '📝 Brouillon';
-      case 'open': return '🟢 Ouvert';
-      case 'in_progress': return '🟡 En cours';
-      case 'completed': return '⚫ Terminé';
-      case 'full': return '🔴 Complet';
-      default: return status;
-    }
-  };
-
-  const filteredTournaments = tournaments.filter(tournament => {
-    if (filter === 'all') return true;
-    return tournament.status === filter;
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState({
+    status: 'all',
+    type: 'all',
+    search: ''
   });
 
-  const handleJoinTournament = (tournamentId: number) => {
-    joinTournament(tournamentId);
+  useEffect(() => {
+    const fetchTournaments = async () => {
+      try {
+        setIsLoading(true);
+        const params: any = {};
+
+        if (filters.status !== 'all') {
+          params.status = filters.status;
+        }
+        if (filters.type !== 'all') {
+          params.type = filters.type;
+        }
+
+        const response = await tournamentAPI.getTournaments(params);
+        setTournaments(response.data);
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Erreur de chargement');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTournaments();
+  }, [filters.status, filters.type]);
+
+  // Filtrage côté client pour la recherche
+  const filteredTournaments = tournaments.filter(tournament => 
+    tournament.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+    tournament.description.toLowerCase().includes(filters.search.toLowerCase())
+  );
+
+  const getStatusBadge = (status: string) => {
+    const badges = {
+      pending: { text: '⏳ En attente', color: 'var(--warning)' },
+      in_progress: { text: '▶️ En cours', color: 'var(--success)' },
+      completed: { text: '✅ Terminé', color: 'var(--gray-600)' }
+    };
+    return badges[status as keyof typeof badges] || badges.pending;
+  };
+
+  const getTypeName = (type: string) => {
+    const types = {
+      single_elimination: '🏆 Élimination simple',
+      double_elimination: '🏆🏆 Élimination double',
+      round_robin: '🔄 Round Robin'
+    };
+    return types[type as keyof typeof types] || type;
   };
 
   return (
-    <div>
-      <section className="page-header">
-        <div className="container flex items-center justify-between">
-          <div>
-            <h1 className="page-title">🏆 Tournois</h1>
-            <p className="page-subtitle">
-              {tournaments.length === 0 
-                ? "Aucun tournoi disponible pour le moment" 
-                : `${tournaments.length} tournoi${tournaments.length > 1 ? 's' : ''} disponible${tournaments.length > 1 ? 's' : ''}`
-              }
-            </p>
+    <div className="tournaments-page">
+      <div className="page-header">
+        <div className="container">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h1 className="page-title">🏆 Tournois</h1>
+              <p className="page-subtitle">Rejoignez ou créez un tournoi</p>
+            </div>
+            <Link to="/create-tournament" className="btn btn-primary">
+              ➕ Créer un tournoi
+            </Link>
           </div>
-          <Link to="/create-tournament" className="btn" style={{ background: 'white', color: 'var(--primary)' }}>
-            ➕ Créer un tournoi
-          </Link>
         </div>
-      </section>
+      </div>
 
       <div className="container">
         {/* Filtres */}
-        <div className="card mb-4">
-          <div className="flex gap-4">
-            <button 
-              className={`btn ${filter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setFilter('all')}
-            >
-              Tous ({tournaments.length})
-            </button>
-            <button 
-              className={`btn ${filter === 'open' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setFilter('open')}
-            >
-              Ouverts ({tournaments.filter(t => t.status === 'open').length})
-            </button>
-            <button 
-              className={`btn ${filter === 'in_progress' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setFilter('in_progress')}
-            >
-              En cours ({tournaments.filter(t => t.status === 'in_progress').length})
-            </button>
-            <button 
-              className={`btn ${filter === 'completed' ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => setFilter('completed')}
-            >
-              Terminés ({tournaments.filter(t => t.status === 'completed').length})
-            </button>
+        <div className="card" style={{ marginBottom: '2rem' }}>
+          <h3 style={{ marginBottom: '1rem' }}>🔍 Filtres</h3>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+            gap: '1rem' 
+          }}>
+            <div className="form-group">
+              <label className="form-label">Statut</label>
+              <select
+                className="input"
+                value={filters.status}
+                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+              >
+                <option value="all">📊 Tous</option>
+                <option value="pending">⏳ En attente</option>
+                <option value="in_progress">▶️ En cours</option>
+                <option value="completed">✅ Terminés</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Type</label>
+              <select
+                className="input"
+                value={filters.type}
+                onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+              >
+                <option value="all">🎮 Tous</option>
+                <option value="single_elimination">🏆 Élimination simple</option>
+                <option value="double_elimination">🏆🏆 Élimination double</option>
+                <option value="round_robin">🔄 Round Robin</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Recherche</label>
+              <input
+                className="input"
+                placeholder="Nom du tournoi..."
+                value={filters.search}
+                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Message si aucun tournoi */}
-        {tournaments.length === 0 ? (
-          <div className="card text-center">
-            <div style={{ padding: '3rem' }}>
-              <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🏆</div>
-              <h3>Aucun tournoi créé</h3>
-              <p style={{ color: 'var(--gray-700)', marginBottom: '2rem' }}>
-                Soyez le premier à organiser un tournoi épique !
-              </p>
-              <Link to="/create-tournament" className="btn btn-primary">
-                ➕ Créer le premier tournoi
-              </Link>
-            </div>
+        {/* Liste des tournois */}
+        {isLoading ? (
+          <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+            <div style={{ fontSize: '3rem' }}>⏳</div>
+            <p>Chargement des tournois...</p>
+          </div>
+        ) : error ? (
+          <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+            <div style={{ fontSize: '3rem', color: 'var(--danger)' }}>⚠️</div>
+            <p style={{ color: 'var(--danger)' }}>{error}</p>
           </div>
         ) : filteredTournaments.length === 0 ? (
-          <div className="card text-center">
-            <h3>Aucun tournoi trouvé</h3>
-            <p style={{ color: 'var(--gray-700)', marginBottom: '1rem' }}>
-              Aucun tournoi ne correspond au filtre "{filter}"
-            </p>
-            <button 
-              onClick={() => setFilter('all')} 
-              className="btn btn-secondary"
-            >
-              Voir tous les tournois
-            </button>
+          <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+            <div style={{ fontSize: '3rem' }}>😕</div>
+            <p style={{ color: 'var(--gray-600)' }}>Aucun tournoi trouvé</p>
+            <Link to="/create-tournament" className="btn btn-primary" style={{ marginTop: '1rem' }}>
+              ➕ Créer le premier tournoi
+            </Link>
           </div>
         ) : (
-          /* Liste des tournois */
           <div className="grid grid-2">
-            {filteredTournaments.map((tournament) => (
-              <div key={tournament.id} className="card">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{tournament.name}</h3>
-                  <span style={{ color: getStatusColor(tournament.status), fontWeight: 'bold' }}>
-                    {getStatusText(tournament.status)}
-                  </span>
-                </div>
+            {filteredTournaments.map(tournament => {
+              const statusBadge = getStatusBadge(tournament.status);
+              const progress = (tournament.currentParticipants / tournament.maxParticipants) * 100;
 
-                {tournament.description && (
-                  <p style={{ color: 'var(--gray-700)', marginBottom: '1rem' }}>
-                    {tournament.description}
+              return (
+                <div key={tournament.id} className="card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                    <h3 style={{ margin: 0, flex: 1 }}>{tournament.name}</h3>
+                    <span style={{ 
+                      padding: '0.25rem 0.75rem', 
+                      borderRadius: '20px',
+                      fontSize: '0.85rem',
+                      fontWeight: 'bold',
+                      background: `${statusBadge.color}20`,
+                      color: statusBadge.color
+                    }}>
+                      {statusBadge.text}
+                    </span>
+                  </div>
+
+                  <p style={{ color: 'var(--gray-600)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                    {tournament.description || 'Pas de description'}
                   </p>
-                )}
 
-                <div style={{ marginBottom: '1rem', fontSize: '0.9rem', color: 'var(--gray-700)' }}>
-                  <div style={{ marginBottom: '0.25rem' }}>
-                    👤 Créé par: <strong>{tournament.creator}</strong>
-                  </div>
-                  <div style={{ marginBottom: '0.25rem' }}>
-                    🎯 Type: <strong>{tournament.type.replace('_', ' ')}</strong>
-                  </div>
-                  <div style={{ marginBottom: '0.25rem' }}>
-                    👥 Participants: <strong>{tournament.currentParticipants}/{tournament.maxParticipants}</strong>
-                  </div>
-                  <div>
-                    📅 Créé: <strong>{new Date(tournament.createdAt).toLocaleDateString('fr-FR')}</strong>
-                  </div>
-                </div>
-
-                {/* Barre de progression des participants */}
-                <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ 
-                    background: 'var(--gray-200)', 
-                    height: '6px', 
-                    borderRadius: '3px',
-                    overflow: 'hidden'
-                  }}>
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                      <span>{getTypeName(tournament.type)}</span>
+                      <span style={{ fontWeight: 'bold' }}>
+                        {tournament.currentParticipants}/{tournament.maxParticipants}
+                      </span>
+                    </div>
                     <div style={{ 
-                      background: tournament.currentParticipants === tournament.maxParticipants 
-                        ? 'var(--danger)' 
-                        : 'var(--success)',
-                      height: '100%', 
-                      width: `${(tournament.currentParticipants / tournament.maxParticipants) * 100}%`,
-                      transition: 'width 0.3s ease'
-                    }}></div>
+                      width: '100%', 
+                      height: '8px', 
+                      background: 'var(--gray-200)', 
+                      borderRadius: '4px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{ 
+                        width: `${progress}%`, 
+                        height: '100%', 
+                        background: progress >= 100 ? 'var(--danger)' : 'var(--success)',
+                        transition: 'width 0.3s'
+                      }}></div>
+                    </div>
+                  </div>
+
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    paddingTop: '1rem',
+                    borderTop: '1px solid var(--gray-200)'
+                  }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>
+                      Par {tournament.creator.username}
+                    </span>
+                    <Link 
+                      to={`/tournaments/${tournament.id}`} 
+                      className="btn btn-primary"
+                      style={{ padding: '0.5rem 1rem' }}
+                    >
+                      Voir détails →
+                    </Link>
                   </div>
                 </div>
-
-                <div className="flex gap-4">
-                  <Link 
-                    to={`/tournaments/${tournament.id}`} 
-                    className="btn btn-primary"
-                  >
-                    👁️ Voir détails
-                  </Link>
-                  
-                  {tournament.status === 'open' && tournament.currentParticipants < tournament.maxParticipants && (
-                    <button 
-                      className="btn btn-success"
-                      onClick={() => handleJoinTournament(tournament.id)}
-                    >
-                      ⚡ Rejoindre
-                    </button>
-                  )}
-
-                  {tournament.status === 'full' && (
-                    <button className="btn btn-secondary" disabled>
-                      🔴 Complet
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Message informatif */}
-        {tournaments.length > 0 && (
-          <div className="card" style={{ marginTop: '2rem', background: 'rgba(102, 126, 234, 0.05)' }}>
-            <h4 style={{ color: 'var(--primary)', marginBottom: '0.5rem' }}>
-              💡 Comment ça marche ?
-            </h4>
-            <ul style={{ color: 'var(--gray-700)', paddingLeft: '1.5rem' }}>
-              <li>Cliquez sur "👁️ Voir détails" pour voir toutes les infos d'un tournoi</li>
-              <li>Utilisez "⚡ Rejoindre" pour participer à un tournoi ouvert</li>
-              <li>Créez votre propre tournoi avec le bouton "➕ Créer un tournoi"</li>
-            </ul>
+              );
+            })}
           </div>
         )}
       </div>

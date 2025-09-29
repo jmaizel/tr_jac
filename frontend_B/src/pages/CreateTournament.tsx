@@ -1,34 +1,48 @@
-// frontend_B/src/pages/CreateTournament.tsx - FORMULAIRE COMPLET
+// frontend_B/src/pages/CreateTournament.tsx - VERSION PROPRE PRÊTE BACKEND
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTournaments, CreateTournamentData } from '../contexts/TournamentContext';
+import { tournamentAPI } from '../services/api';
+
+interface TournamentForm {
+  name: string;
+  description: string;
+  type: 'single_elimination' | 'double_elimination' | 'round_robin';
+  maxParticipants: number;
+  startDate?: string;
+}
 
 const CreateTournament: React.FC = () => {
   const navigate = useNavigate();
-  const { createTournament } = useTournaments();
-
-  // State du formulaire
-  const [formData, setFormData] = useState<CreateTournamentData>({
+  const [formData, setFormData] = useState<TournamentForm>({
     name: '',
     description: '',
     type: 'single_elimination',
     maxParticipants: 8,
   });
-
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Options pour les selects
   const tournamentTypes = [
-    { value: 'single_elimination', label: '🏆 Élimination simple', description: 'Un seul match perdu = éliminé' },
-    { value: 'double_elimination', label: '🏆🏆 Élimination double', description: 'Deux chances, plus équitable' },
-    { value: 'round_robin', label: '🔄 Round Robin', description: 'Tout le monde joue contre tout le monde' },
+    { 
+      value: 'single_elimination', 
+      label: '🏆 Élimination simple', 
+      description: 'Un seul match perdu = éliminé' 
+    },
+    { 
+      value: 'double_elimination', 
+      label: '🏆🏆 Élimination double', 
+      description: 'Deux chances, plus équitable' 
+    },
+    { 
+      value: 'round_robin', 
+      label: '🔄 Round Robin', 
+      description: 'Tout le monde joue contre tout le monde' 
+    },
   ];
 
   const participantOptions = [4, 8, 16, 32, 64];
 
-  // Validation
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -54,22 +68,17 @@ const CreateTournament: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Gestion des changements
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'maxParticipants' ? parseInt(value) : value
-    }));
-
-    // Effacer l'erreur si l'utilisateur corrige
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+  const handleChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
     }
   };
 
-  // Soumission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -80,242 +89,239 @@ const CreateTournament: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Simuler un délai d'API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Créer le tournoi
-      const newTournament = createTournament(formData);
-      
-      console.log('🎉 Tournoi créé avec succès:', newTournament);
-      
-      // Rediriger vers la liste des tournois
-      navigate('/tournaments');
-      
-    } catch (error) {
-      console.error('Erreur lors de la création:', error);
-      setErrors({ general: 'Erreur lors de la création du tournoi' });
-    } finally {
+      const response = await tournamentAPI.createTournament(formData);
+      navigate(`/tournaments/${response.data.id}`);
+    } catch (err: any) {
+      setErrors({ 
+        submit: err.response?.data?.message || 'Erreur lors de la création du tournoi' 
+      });
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div>
-      <section className="page-header">
+    <div className="create-tournament-page">
+      <div className="page-header">
         <div className="container">
-          <h1 className="page-title">⚔️ Créer un Tournoi</h1>
-          <p className="page-subtitle">Organisez votre tournoi et invitez vos adversaires</p>
+          <h1 className="page-title">➕ Créer un tournoi</h1>
+          <p className="page-subtitle">Organisez votre propre compétition</p>
         </div>
-      </section>
+      </div>
 
       <div className="container">
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          
-          {/* Formulaire principal */}
-          <form onSubmit={handleSubmit} className="card">
-            <h2 style={{ marginBottom: '1.5rem', color: 'var(--primary)' }}>
-              📋 Informations du Tournoi
-            </h2>
+          <form onSubmit={handleSubmit}>
+            <div className="card">
+              <h2 style={{ marginBottom: '2rem' }}>📋 Informations du tournoi</h2>
 
-            {/* Erreur générale */}
-            {errors.general && (
-              <div style={{
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid var(--danger)',
-                borderRadius: '6px',
-                padding: '1rem',
-                marginBottom: '1rem',
-                color: 'var(--danger)'
-              }}>
-                ❌ {errors.general}
-              </div>
-            )}
-
-            {/* Nom du tournoi */}
-            <div className="form-group">
-              <label htmlFor="name" className="form-label">
-                🏆 Nom du tournoi *
-              </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className={`input ${errors.name ? 'error' : ''}`}
-                placeholder="Ex: Championship Pong 2024"
-                maxLength={50}
-                style={{
-                  borderColor: errors.name ? 'var(--danger)' : undefined
-                }}
-              />
-              {errors.name && (
-                <div style={{ color: 'var(--danger)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-                  {errors.name}
+              {errors.submit && (
+                <div style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: 'var(--danger)',
+                  padding: '0.75rem',
+                  borderRadius: '6px',
+                  marginBottom: '1.5rem',
+                  textAlign: 'center'
+                }}>
+                  {errors.submit}
                 </div>
               )}
-              <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>
-                {formData.name.length}/50 caractères
-              </div>
-            </div>
 
-            {/* Description */}
-            <div className="form-group">
-              <label htmlFor="description" className="form-label">
-                📝 Description (optionnel)
-              </label>
-              <textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                className={`input ${errors.description ? 'error' : ''}`}
-                placeholder="Décrivez votre tournoi, les règles particulières..."
-                rows={3}
-                maxLength={200}
-                style={{
-                  borderColor: errors.description ? 'var(--danger)' : undefined,
-                  resize: 'vertical',
-                  minHeight: '80px'
-                }}
-              />
-              {errors.description && (
-                <div style={{ color: 'var(--danger)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-                  {errors.description}
-                </div>
-              )}
-              <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>
-                {(formData.description || '').length}/200 caractères
-              </div>
-            </div>
-
-            {/* Type de tournoi */}
-            <div className="form-group">
-              <label htmlFor="type" className="form-label">
-                🎯 Type de tournoi
-              </label>
-              <select
-                id="type"
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                className="input"
-              >
-                {tournamentTypes.map(type => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-              
-              {/* Description du type sélectionné */}
-              <div style={{
-                marginTop: '0.5rem',
-                padding: '0.75rem',
-                background: 'rgba(102, 126, 234, 0.05)',
-                borderRadius: '6px',
-                fontSize: '0.9rem',
-                color: 'var(--gray-700)'
-              }}>
-                💡 {tournamentTypes.find(t => t.value === formData.type)?.description}
-              </div>
-            </div>
-
-            {/* Nombre de participants */}
-            <div className="form-group">
-              <label htmlFor="maxParticipants" className="form-label">
-                👥 Nombre maximum de participants
-              </label>
-              <select
-                id="maxParticipants"
-                name="maxParticipants"
-                value={formData.maxParticipants}
-                onChange={handleChange}
-                className={`input ${errors.maxParticipants ? 'error' : ''}`}
-                style={{
-                  borderColor: errors.maxParticipants ? 'var(--danger)' : undefined
-                }}
-              >
-                {participantOptions.map(num => (
-                  <option key={num} value={num}>
-                    {num} joueurs
-                  </option>
-                ))}
-              </select>
-              {errors.maxParticipants && (
-                <div style={{ color: 'var(--danger)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-                  {errors.maxParticipants}
-                </div>
-              )}
-            </div>
-
-            {/* Aperçu */}
-            <div style={{
-              marginTop: '2rem',
-              padding: '1.5rem',
-              background: 'var(--gray-100)',
-              borderRadius: '8px',
-              border: '2px dashed var(--gray-300)'
-            }}>
-              <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>
-                👀 Aperçu du tournoi
-              </h3>
-              
-              <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.9rem' }}>
-                <div><strong>Nom:</strong> {formData.name || 'Sans nom'}</div>
-                <div><strong>Type:</strong> {tournamentTypes.find(t => t.value === formData.type)?.label}</div>
-                <div><strong>Participants:</strong> {formData.maxParticipants} maximum</div>
-                {formData.description && (
-                  <div><strong>Description:</strong> {formData.description}</div>
+              {/* Nom du tournoi */}
+              <div className="form-group">
+                <label htmlFor="name" className="form-label">
+                  Nom du tournoi *
+                </label>
+                <input
+                  id="name"
+                  className="input"
+                  value={formData.name}
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  placeholder="Ex: Tournoi d'été 2025"
+                  maxLength={50}
+                />
+                {errors.name && (
+                  <span style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>
+                    {errors.name}
+                  </span>
                 )}
-                <div><strong>Statut initial:</strong> 📝 Brouillon</div>
+                <div style={{ 
+                  fontSize: '0.85rem', 
+                  color: 'var(--gray-600)', 
+                  marginTop: '0.25rem',
+                  textAlign: 'right' 
+                }}>
+                  {formData.name.length}/50
+                </div>
               </div>
-            </div>
 
-            {/* Boutons */}
-            <div style={{ 
-              display: 'flex', 
-              gap: '1rem', 
-              justifyContent: 'flex-end',
-              marginTop: '2rem',
-              paddingTop: '1rem',
-              borderTop: '1px solid var(--gray-200)'
-            }}>
-              <button
-                type="button"
-                onClick={() => navigate('/tournaments')}
-                className="btn btn-secondary"
-                disabled={isSubmitting}
-              >
-                ❌ Annuler
-              </button>
-              
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={isSubmitting || !formData.name.trim()}
-                style={{
-                  opacity: isSubmitting || !formData.name.trim() ? 0.6 : 1,
-                  cursor: isSubmitting || !formData.name.trim() ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {isSubmitting ? '⏳ Création...' : '🚀 Créer le tournoi'}
-              </button>
+              {/* Description */}
+              <div className="form-group">
+                <label htmlFor="description" className="form-label">
+                  Description (optionnel)
+                </label>
+                <textarea
+                  id="description"
+                  className="input"
+                  value={formData.description}
+                  onChange={(e) => handleChange('description', e.target.value)}
+                  placeholder="Décrivez votre tournoi..."
+                  rows={4}
+                  maxLength={200}
+                  style={{ resize: 'vertical', minHeight: '100px' }}
+                />
+                {errors.description && (
+                  <span style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>
+                    {errors.description}
+                  </span>
+                )}
+                <div style={{ 
+                  fontSize: '0.85rem', 
+                  color: 'var(--gray-600)', 
+                  marginTop: '0.25rem',
+                  textAlign: 'right' 
+                }}>
+                  {formData.description.length}/200
+                </div>
+              </div>
+
+              {/* Type de tournoi */}
+              <div className="form-group">
+                <label className="form-label">Type de tournoi *</label>
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  {tournamentTypes.map(type => (
+                    <label
+                      key={type.value}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        padding: '1rem',
+                        border: formData.type === type.value 
+                          ? '2px solid var(--primary)' 
+                          : '2px solid var(--gray-300)',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        background: formData.type === type.value 
+                          ? 'rgba(102, 126, 234, 0.05)' 
+                          : 'white'
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="type"
+                        value={type.value}
+                        checked={formData.type === type.value}
+                        onChange={(e) => handleChange('type', e.target.value)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>
+                          {type.label}
+                        </div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>
+                          {type.description}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Nombre de participants */}
+              <div className="form-group">
+                <label htmlFor="maxParticipants" className="form-label">
+                  Nombre maximum de participants *
+                </label>
+                <select
+                  id="maxParticipants"
+                  className="input"
+                  value={formData.maxParticipants}
+                  onChange={(e) => handleChange('maxParticipants', parseInt(e.target.value))}
+                >
+                  {participantOptions.map(num => (
+                    <option key={num} value={num}>
+                      {num} joueurs
+                    </option>
+                  ))}
+                </select>
+                {errors.maxParticipants && (
+                  <span style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>
+                    {errors.maxParticipants}
+                  </span>
+                )}
+              </div>
+
+              {/* Date de début (optionnel) */}
+              <div className="form-group">
+                <label htmlFor="startDate" className="form-label">
+                  Date de début (optionnel)
+                </label>
+                <input
+                  id="startDate"
+                  type="datetime-local"
+                  className="input"
+                  value={formData.startDate || ''}
+                  onChange={(e) => handleChange('startDate', e.target.value)}
+                  min={new Date().toISOString().slice(0, 16)}
+                />
+                <div style={{ fontSize: '0.85rem', color: 'var(--gray-600)', marginTop: '0.25rem' }}>
+                  Si non spécifiée, le tournoi démarrera dès qu'il sera complet
+                </div>
+              </div>
+
+              {/* Récapitulatif */}
+              <div style={{
+                marginTop: '2rem',
+                padding: '1rem',
+                background: 'var(--gray-100)',
+                borderRadius: '8px'
+              }}>
+                <h3 style={{ marginBottom: '1rem' }}>📋 Récapitulatif</h3>
+                <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.9rem' }}>
+                  <div>
+                    <strong>Nom :</strong> {formData.name || <em style={{ color: 'var(--gray-500)' }}>Non défini</em>}
+                  </div>
+                  <div>
+                    <strong>Type :</strong> {tournamentTypes.find(t => t.value === formData.type)?.label}
+                  </div>
+                  <div>
+                    <strong>Participants :</strong> {formData.maxParticipants} maximum
+                  </div>
+                  {formData.startDate && (
+                    <div>
+                      <strong>Début :</strong> {new Date(formData.startDate).toLocaleString('fr-FR')}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Boutons */}
+              <div style={{
+                display: 'flex',
+                gap: '1rem',
+                marginTop: '2rem',
+                justifyContent: 'flex-end'
+              }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => navigate('/tournaments')}
+                  disabled={isSubmitting}
+                >
+                  ❌ Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? '⏳ Création...' : '✅ Créer le tournoi'}
+                </button>
+              </div>
             </div>
           </form>
-
-          {/* Aide */}
-          <div className="card" style={{ marginTop: '1rem', background: 'rgba(16, 185, 129, 0.05)' }}>
-            <h4 style={{ color: 'var(--success)', marginBottom: '1rem' }}>
-              💡 Conseils pour créer un bon tournoi
-            </h4>
-            <ul style={{ color: 'var(--gray-700)', paddingLeft: '1.5rem', lineHeight: '1.6' }}>
-              <li><strong>Nom accrocheur:</strong> Choisissez un nom qui donne envie de participer</li>
-              <li><strong>Description claire:</strong> Expliquez les règles et l'ambiance du tournoi</li>
-              <li><strong>Taille adaptée:</strong> 8-16 participants pour un bon équilibre</li>
-              <li><strong>Élimination simple:</strong> Plus rapide, idéal pour débuter</li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>

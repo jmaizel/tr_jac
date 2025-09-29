@@ -1,319 +1,412 @@
-// frontend_B/src/pages/TournamentDetail.tsx - PAGE DÉTAIL TOURNOI COMPLÈTE
+// frontend_B/src/pages/TournamentDetail.tsx - VERSION PROPRE PRÊTE BACKEND
 
-import React from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useTournaments } from '../contexts/TournamentContext';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { tournamentAPI } from '../services/api';
+
+interface Tournament {
+  id: number;
+  name: string;
+  description: string;
+  type: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  maxParticipants: number;
+  currentParticipants: number;
+  createdAt: string;
+  startDate?: string;
+  creator: {
+    id: string;
+    username: string;
+  };
+  participants: Array<{
+    id: string;
+    username: string;
+    avatar: string;
+  }>;
+}
 
 const TournamentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { tournaments, joinTournament, leaveTournament, deleteTournament } = useTournaments();
-  
-  // Trouver le tournoi par ID
-  const tournament = tournaments.find(t => t.id === parseInt(id || '0'));
+  const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isJoining, setIsJoining] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  if (!tournament) {
+  // Vérifier si l'utilisateur est participant
+  const [isParticipant, setIsParticipant] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>(''); // À récupérer du context user
+
+  useEffect(() => {
+    const fetchTournament = async () => {
+      if (!id) return;
+
+      try {
+        setIsLoading(true);
+        const response = await tournamentAPI.getTournament(parseInt(id));
+        setTournament(response.data);
+        
+        // TODO: Récupérer l'ID utilisateur actuel depuis le context
+        // setIsParticipant(response.data.participants.some(p => p.id === currentUserId));
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Erreur de chargement');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTournament();
+  }, [id]);
+
+  const handleJoin = async () => {
+    if (!tournament) return;
+
+    setIsJoining(true);
+    setMessage(null);
+
+    try {
+      await tournamentAPI.joinTournament(tournament.id);
+      setMessage({ type: 'success', text: 'Vous avez rejoint le tournoi !' });
+      
+      // Recharger les données
+      const response = await tournamentAPI.getTournament(tournament.id);
+      setTournament(response.data);
+      setIsParticipant(true);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur lors de l\'inscription' });
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  const handleLeave = async () => {
+    if (!tournament) return;
+
+    setIsLeaving(true);
+    setMessage(null);
+
+    try {
+      await tournamentAPI.leaveTournament(tournament.id);
+      setMessage({ type: 'success', text: 'Vous avez quitté le tournoi' });
+      
+      // Recharger les données
+      const response = await tournamentAPI.getTournament(tournament.id);
+      setTournament(response.data);
+      setIsParticipant(false);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur lors du départ' });
+    } finally {
+      setIsLeaving(false);
+    }
+  };
+
+  const handleStart = async () => {
+    if (!tournament) return;
+
+    try {
+      await tournamentAPI.startTournament(tournament.id);
+      setMessage({ type: 'success', text: 'Tournoi démarré !' });
+      
+      // Recharger
+      const response = await tournamentAPI.getTournament(tournament.id);
+      setTournament(response.data);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur au démarrage' });
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const badges = {
+      pending: { text: '⏳ En attente', color: 'var(--warning)' },
+      in_progress: { text: '▶️ En cours', color: 'var(--success)' },
+      completed: { text: '✅ Terminé', color: 'var(--gray-600)' }
+    };
+    return badges[status as keyof typeof badges] || badges.pending;
+  };
+
+  const getTypeName = (type: string) => {
+    const types = {
+      single_elimination: '🏆 Élimination simple',
+      double_elimination: '🏆🏆 Élimination double',
+      round_robin: '🔄 Round Robin'
+    };
+    return types[type as keyof typeof types] || type;
+  };
+
+  if (isLoading) {
     return (
-      <div>
-        <section className="page-header">
-          <div className="container">
-            <h1 className="page-title">❌ Tournoi Introuvable</h1>
-            <p className="page-subtitle">Le tournoi demandé n'existe pas</p>
-          </div>
-        </section>
-        <div className="container">
-          <div className="card text-center">
-            <h2>Oups !</h2>
-            <p>Ce tournoi n'existe pas ou a été supprimé.</p>
-            <Link to="/tournaments" className="btn btn-primary">
-              ← Retour aux tournois
-            </Link>
-          </div>
-        </div>
+      <div className="container" style={{ textAlign: 'center', paddingTop: '3rem' }}>
+        <div style={{ fontSize: '3rem' }}>⏳</div>
+        <p>Chargement du tournoi...</p>
       </div>
     );
   }
 
-  // Fonctions d'action
-  const handleJoin = () => {
-    joinTournament(tournament.id);
-  };
+  if (error || !tournament) {
+    return (
+      <div className="container" style={{ textAlign: 'center', paddingTop: '3rem' }}>
+        <div style={{ fontSize: '3rem', color: 'var(--danger)' }}>⚠️</div>
+        <p style={{ color: 'var(--danger)' }}>{error || 'Tournoi introuvable'}</p>
+        <button 
+          className="btn btn-secondary" 
+          onClick={() => navigate('/tournaments')}
+          style={{ marginTop: '1rem' }}
+        >
+          ← Retour aux tournois
+        </button>
+      </div>
+    );
+  }
 
-  const handleLeave = () => {
-    leaveTournament(tournament.id);
-  };
-
-  const handleDelete = () => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce tournoi ?')) {
-      deleteTournament(tournament.id);
-      navigate('/tournaments');
-    }
-  };
-
-  // Helpers pour l'affichage
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'open': return 'var(--success)';
-      case 'full': return 'var(--warning)';
-      case 'in_progress': return 'var(--primary)';
-      case 'completed': return 'var(--gray-500)';
-      case 'draft': return 'var(--gray-400)';
-      default: return 'var(--gray-500)';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'draft': return '📝 Brouillon';
-      case 'open': return '🟢 Ouvert aux inscriptions';
-      case 'full': return '🔴 Complet';
-      case 'in_progress': return '🟡 En cours';
-      case 'completed': return '✅ Terminé';
-      case 'cancelled': return '❌ Annulé';
-      default: return status;
-    }
-  };
-
-  const getTypeText = (type: string) => {
-    switch (type) {
-      case 'single_elimination': return '🏆 Élimination simple';
-      case 'double_elimination': return '🏆🏆 Élimination double';
-      case 'round_robin': return '🔄 Round Robin';
-      default: return type;
-    }
-  };
-
-  const canJoin = tournament.status === 'open' && tournament.currentParticipants < tournament.maxParticipants;
-  const canLeave = tournament.currentParticipants > 0 && tournament.status !== 'in_progress';
+  const statusBadge = getStatusBadge(tournament.status);
+  const progress = (tournament.currentParticipants / tournament.maxParticipants) * 100;
+  const isFull = tournament.currentParticipants >= tournament.maxParticipants;
+  const canStart = tournament.status === 'pending' && tournament.currentParticipants >= 2;
+  const isCreator = tournament.creator.id === currentUserId;
 
   return (
-    <div>
-      {/* Header avec info principale */}
-      <section className="page-header">
+    <div className="tournament-detail-page">
+      <div className="page-header">
         <div className="container">
-          <div className="flex items-center justify-between">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
             <div>
               <h1 className="page-title">{tournament.name}</h1>
               <p className="page-subtitle">
-                {tournament.description || 'Aucune description'}
+                Par {tournament.creator.username} • {getTypeName(tournament.type)}
               </p>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ 
-                color: getStatusColor(tournament.status), 
-                fontWeight: 'bold', 
-                fontSize: '1.2rem',
-                marginBottom: '0.5rem'
-              }}>
-                {getStatusText(tournament.status)}
-              </div>
-              <div style={{ color: 'rgba(255,255,255,0.8)' }}>
-                ID: #{tournament.id}
-              </div>
-            </div>
+            <span style={{ 
+              padding: '0.5rem 1rem', 
+              borderRadius: '20px',
+              fontSize: '1rem',
+              fontWeight: 'bold',
+              background: `${statusBadge.color}20`,
+              color: statusBadge.color
+            }}>
+              {statusBadge.text}
+            </span>
           </div>
         </div>
-      </section>
+      </div>
 
       <div className="container">
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-          <Link to="/tournaments" className="btn btn-secondary">
-            ← Retour aux tournois
-          </Link>
-        </div>
+        {message && (
+          <div style={{
+            background: message.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+            color: message.type === 'success' ? 'var(--success)' : 'var(--danger)',
+            padding: '0.75rem',
+            borderRadius: '6px',
+            marginBottom: '1.5rem',
+            textAlign: 'center'
+          }}>
+            {message.text}
+          </div>
+        )}
 
-        {/* Informations principales */}
-        <div className="grid grid-2 mb-4">
+        <div className="grid grid-2">
+          {/* Informations */}
           <div className="card">
-            <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>
-              📋 Informations Générales
-            </h3>
+            <h2 style={{ marginBottom: '1.5rem' }}>📋 Informations</h2>
             
-            <div style={{ marginBottom: '1rem' }}>
-              <strong>Type de tournoi:</strong><br />
-              <span style={{ color: 'var(--primary)' }}>{getTypeText(tournament.type)}</span>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Description</h3>
+              <p style={{ color: 'var(--gray-700)' }}>
+                {tournament.description || 'Pas de description'}
+              </p>
             </div>
 
-            <div style={{ marginBottom: '1rem' }}>
-              <strong>Participants:</strong><br />
-              <span style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                {tournament.currentParticipants} / {tournament.maxParticipants}
-              </span>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Participants</h3>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                  <span>{tournament.currentParticipants}/{tournament.maxParticipants} inscrits</span>
+                  <span style={{ 
+                    fontWeight: 'bold',
+                    color: isFull ? 'var(--danger)' : 'var(--success)'
+                  }}>
+                    {isFull ? '🔴 Complet' : '🟢 Places disponibles'}
+                  </span>
+                </div>
+              </div>
               <div style={{ 
+                width: '100%', 
+                height: '12px', 
                 background: 'var(--gray-200)', 
-                height: '8px', 
-                borderRadius: '4px', 
-                marginTop: '0.5rem',
+                borderRadius: '6px',
                 overflow: 'hidden'
               }}>
                 <div style={{ 
-                  background: tournament.currentParticipants === tournament.maxParticipants 
-                    ? 'var(--danger)' 
-                    : 'var(--success)',
+                  width: `${progress}%`, 
                   height: '100%', 
-                  width: `${(tournament.currentParticipants / tournament.maxParticipants) * 100}%`,
-                  transition: 'width 0.3s ease'
+                  background: isFull ? 'var(--danger)' : 'var(--success)',
+                  transition: 'width 0.3s'
                 }}></div>
               </div>
             </div>
 
+            {tournament.startDate && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Date de début</h3>
+                <p style={{ color: 'var(--gray-700)' }}>
+                  📅 {new Date(tournament.startDate).toLocaleString('fr-FR')}
+                </p>
+              </div>
+            )}
+
             <div>
-              <strong>Créé par:</strong><br />
-              <span style={{ color: 'var(--primary)' }}>👤 {tournament.creator}</span>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>
-              📅 Détails Temporels
-            </h3>
-            
-            <div style={{ marginBottom: '1rem' }}>
-              <strong>Créé le:</strong><br />
-              {new Date(tournament.createdAt).toLocaleDateString('fr-FR', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+              <h3 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Créé le</h3>
+              <p style={{ color: 'var(--gray-700)' }}>
+                📅 {new Date(tournament.createdAt).toLocaleString('fr-FR')}
+              </p>
             </div>
 
-            {tournament.status === 'draft' && (
-              <div style={{ 
-                background: 'rgba(102, 126, 234, 0.1)', 
-                padding: '1rem', 
-                borderRadius: '8px',
-                border: '1px solid var(--primary)'
-              }}>
-                <strong>📝 En attente</strong><br />
-                Ce tournoi est encore en préparation
-              </div>
-            )}
-
-            {tournament.status === 'open' && (
-              <div style={{ 
-                background: 'rgba(16, 185, 129, 0.1)', 
-                padding: '1rem', 
-                borderRadius: '8px',
-                border: '1px solid var(--success)'
-              }}>
-                <strong>🎯 Inscriptions ouvertes</strong><br />
-                Vous pouvez rejoindre ce tournoi
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="card">
-          <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>
-            ⚡ Actions Disponibles
-          </h3>
-          
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            {canJoin && (
-              <button onClick={handleJoin} className="btn btn-success">
-                ✅ Rejoindre le tournoi
-              </button>
-            )}
-
-            {canLeave && (
-              <button onClick={handleLeave} className="btn btn-secondary">
-                ❌ Quitter le tournoi
-              </button>
-            )}
-
-            {tournament.creator === 'Jacob' && (
-              <>
-                {tournament.status === 'draft' && (
-                  <button className="btn btn-primary">
-                    🚀 Ouvrir les inscriptions
-                  </button>
-                )}
-                
-                <button onClick={handleDelete} className="btn btn-danger">
-                  🗑️ Supprimer le tournoi
-                </button>
-              </>
-            )}
-
-            {tournament.status === 'full' && tournament.creator === 'Jacob' && (
-              <button className="btn btn-primary">
-                🎯 Démarrer le tournoi
-              </button>
-            )}
-          </div>
-
-          {!canJoin && tournament.status === 'open' && (
+            {/* Actions */}
             <div style={{ 
-              marginTop: '1rem', 
-              padding: '1rem', 
-              background: 'rgba(239, 68, 68, 0.1)',
-              borderRadius: '8px',
-              color: 'var(--danger)'
+              marginTop: '2rem', 
+              paddingTop: '1.5rem', 
+              borderTop: '1px solid var(--gray-200)' 
             }}>
-              ⚠️ Impossible de rejoindre : tournoi complet
-            </div>
-          )}
-        </div>
+              {tournament.status === 'pending' && (
+                <>
+                  {isParticipant ? (
+                    <button
+                      className="btn btn-danger"
+                      onClick={handleLeave}
+                      disabled={isLeaving}
+                      style={{ width: '100%', marginBottom: '0.5rem' }}
+                    >
+                      {isLeaving ? '⏳ Départ...' : '🚪 Quitter le tournoi'}
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-success"
+                      onClick={handleJoin}
+                      disabled={isJoining || isFull}
+                      style={{ width: '100%', marginBottom: '0.5rem' }}
+                    >
+                      {isJoining ? '⏳ Inscription...' : isFull ? '🔴 Complet' : '✅ Rejoindre'}
+                    </button>
+                  )}
 
-        {/* Participants (simulation) */}
-        {tournament.currentParticipants > 0 && (
-          <div className="card">
-            <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>
-              👥 Participants ({tournament.currentParticipants})
-            </h3>
-            
-            <div className="grid grid-3">
-              {Array.from({ length: tournament.currentParticipants }, (_, i) => (
-                <div key={i} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.5rem',
+                  {isCreator && canStart && (
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleStart}
+                      style={{ width: '100%' }}
+                    >
+                      🚀 Démarrer le tournoi
+                    </button>
+                  )}
+                </>
+              )}
+
+              {tournament.status === 'in_progress' && (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '1rem', 
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  borderRadius: '6px'
+                }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚔️</div>
+                  <div style={{ fontWeight: 'bold', color: 'var(--success)' }}>
+                    Tournoi en cours
+                  </div>
+                </div>
+              )}
+
+              {tournament.status === 'completed' && (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '1rem', 
                   background: 'var(--gray-100)',
                   borderRadius: '6px'
                 }}>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    background: 'var(--primary)',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontSize: '0.8rem',
-                    fontWeight: 'bold'
-                  }}>
-                    {String.fromCharCode(65 + i)}
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🏆</div>
+                  <div style={{ fontWeight: 'bold' }}>
+                    Tournoi terminé
                   </div>
-                  <span>Joueur {i + 1}</span>
                 </div>
-              ))}
+              )}
+            </div>
+          </div>
+
+          {/* Participants */}
+          <div className="card">
+            <h2 style={{ marginBottom: '1.5rem' }}>👥 Participants ({tournament.currentParticipants})</h2>
+            
+            {tournament.participants.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>😕</div>
+                <p>Aucun participant pour le moment</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '0.5rem' }}>
+                {tournament.participants.map((participant, index) => (
+                  <div
+                    key={participant.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1rem',
+                      padding: '0.75rem',
+                      background: 'var(--gray-100)',
+                      borderRadius: '6px'
+                    }}
+                  >
+                    <span style={{ 
+                      fontWeight: 'bold', 
+                      fontSize: '1.2rem',
+                      color: 'var(--gray-500)',
+                      minWidth: '30px'
+                    }}>
+                      #{index + 1}
+                    </span>
+                    <span style={{ fontSize: '1.5rem' }}>{participant.avatar}</span>
+                    <span style={{ fontWeight: 'bold', flex: 1 }}>{participant.username}</span>
+                    {participant.id === tournament.creator.id && (
+                      <span style={{ 
+                        fontSize: '0.85rem',
+                        padding: '0.25rem 0.5rem',
+                        background: 'var(--primary)',
+                        color: 'white',
+                        borderRadius: '12px',
+                        fontWeight: 'bold'
+                      }}>
+                        👑 Créateur
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Brackets (si en cours ou terminé) */}
+        {(tournament.status === 'in_progress' || tournament.status === 'completed') && (
+          <div className="card" style={{ marginTop: '2rem' }}>
+            <h2 style={{ marginBottom: '1.5rem' }}>🎯 Brackets</h2>
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--gray-600)' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🚧</div>
+              <p>Les brackets seront affichés ici</p>
+              <p style={{ fontSize: '0.9rem' }}>
+                Fonctionnalité à venir depuis le backend
+              </p>
             </div>
           </div>
         )}
 
-        {/* Brackets (si disponibles) */}
-        {tournament.status === 'in_progress' || tournament.status === 'completed' && (
-          <div className="card">
-            <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>
-              🏆 Brackets
-            </h3>
-            <div style={{ 
-              padding: '2rem', 
-              textAlign: 'center', 
-              background: 'var(--gray-100)',
-              borderRadius: '8px'
-            }}>
-              <p>🚧 Brackets à implémenter</p>
-              <small>Cette fonctionnalité sera ajoutée plus tard</small>
-            </div>
-          </div>
-        )}
+        {/* Bouton retour */}
+        <div style={{ marginTop: '2rem' }}>
+          <button 
+            className="btn btn-secondary"
+            onClick={() => navigate('/tournaments')}
+          >
+            ← Retour aux tournois
+          </button>
+        </div>
       </div>
     </div>
   );

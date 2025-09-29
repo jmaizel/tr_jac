@@ -1,154 +1,162 @@
-// frontend_B/src/pages/Game.tsx - PAGE GAME POUR GAME_D
+// frontend_B/src/pages/Game.tsx - VERSION PROPRE PRÊTE BACKEND
 
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { gameAPI } from '../services/api';
 
-// Interface pour les informations de partie
-interface GameInfo {
-  gameId: string;
-  players: Player[];
-  spectators: number;
-  gameMode: 'classic' | 'speed' | 'tournament';
-  status: 'waiting' | 'playing' | 'finished';
+interface GameData {
+  id: string;
+  players: Array<{
+    id: string;
+    username: string;
+    avatar: string;
+  }>;
   score: {
     player1: number;
     player2: number;
   };
-}
-
-interface Player {
-  id: string;
-  username: string;
-  avatar: string;
-  isReady: boolean;
+  status: 'waiting' | 'playing' | 'finished';
+  spectatorCount: number;
 }
 
 const Game: React.FC = () => {
-  const [gameInfo, setGameInfo] = useState<GameInfo | null>(null);
-  const [isSpectating, setIsSpectating] = useState(false);
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
-  const [newMessage, setNewMessage] = useState('');
+  const { gameId } = useParams<{ gameId: string }>();
+  const [gameData, setGameData] = useState<GameData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [chatMessage, setChatMessage] = useState('');
+  const [messages, setMessages] = useState<any[]>([]);
 
-  // Simulation de données (à connecter au backend plus tard)
   useEffect(() => {
-    // Simulation d'une partie
-    setGameInfo({
-      gameId: 'game-123',
-      players: [
-        { id: '1', username: 'Player1', avatar: '🎮', isReady: true },
-        { id: '2', username: 'Player2', avatar: '🕹️', isReady: true }
-      ],
-      spectators: 5,
-      gameMode: 'classic',
-      status: 'playing',
-      score: { player1: 3, player2: 2 }
-    });
-  }, []);
+    const fetchGameData = async () => {
+      if (!gameId) return;
+
+      try {
+        setIsLoading(true);
+        const response = await gameAPI.getGame(gameId);
+        setGameData(response.data);
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Erreur de chargement');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchGameData();
+
+    // TODO: Setup WebSocket pour updates en temps réel
+    // const ws = new WebSocket(`ws://localhost:3002/game/${gameId}`);
+    // ws.onmessage = (event) => {
+    //   const data = JSON.parse(event.data);
+    //   setGameData(data.gameState);
+    // };
+    // return () => ws.close();
+  }, [gameId]);
 
   const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
+    if (!chatMessage.trim()) return;
     
-    setChatMessages(prev => [...prev, {
-      id: Date.now(),
+    // TODO: Envoyer via WebSocket
+    setMessages(prev => [...prev, {
       username: 'Moi',
-      message: newMessage,
+      message: chatMessage,
       timestamp: new Date()
     }]);
-    setNewMessage('');
+    setChatMessage('');
   };
+
+  if (isLoading) {
+    return (
+      <div className="container" style={{ textAlign: 'center', paddingTop: '3rem' }}>
+        <div style={{ fontSize: '3rem' }}>⏳</div>
+        <p>Chargement de la partie...</p>
+      </div>
+    );
+  }
+
+  if (error || !gameData) {
+    return (
+      <div className="container" style={{ textAlign: 'center', paddingTop: '3rem' }}>
+        <div style={{ fontSize: '3rem', color: 'var(--danger)' }}>⚠️</div>
+        <p style={{ color: 'var(--danger)' }}>{error || 'Partie introuvable'}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="game-page">
-      {/* Header de la partie */}
       <div className="game-header">
         <div className="container">
           <div className="flex items-center justify-between">
-            <div className="game-info">
-              <h1 className="page-title" style={{ fontSize: '1.5rem', margin: 0 }}>
-                🏓 Partie Pong
-              </h1>
-              <div className="game-meta" style={{ fontSize: '0.9rem', color: 'var(--gray-600)' }}>
-                Mode: {gameInfo?.gameMode} • {gameInfo?.spectators} spectateurs
+            <h1 className="page-title" style={{ fontSize: '1.5rem', margin: 0 }}>
+              🏓 Partie Pong
+            </h1>
+            
+            <div className="game-score" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2rem',
+              background: 'var(--white)',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '8px',
+              boxShadow: 'var(--shadow)'
+            }}>
+              <div>
+                <div style={{ fontWeight: 'bold' }}>{gameData.players[0]?.username || 'Joueur 1'}</div>
+                <div style={{ fontSize: '2rem', textAlign: 'center' }}>{gameData.score.player1}</div>
+              </div>
+              <div style={{ fontSize: '1.5rem', color: 'var(--gray-500)' }}>VS</div>
+              <div>
+                <div style={{ fontWeight: 'bold' }}>{gameData.players[1]?.username || 'Joueur 2'}</div>
+                <div style={{ fontSize: '2rem', textAlign: 'center' }}>{gameData.score.player2}</div>
               </div>
             </div>
-            
-            {/* Score */}
-            {gameInfo && (
-              <div className="game-score" style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '2rem',
-                background: 'var(--white)',
-                padding: '0.75rem 1.5rem',
-                borderRadius: '8px',
-                boxShadow: 'var(--shadow)'
-              }}>
-                <div className="player-score">
-                  <div style={{ fontWeight: 'bold' }}>{gameInfo.players[0]?.username}</div>
-                  <div style={{ fontSize: '2rem', textAlign: 'center' }}>{gameInfo.score.player1}</div>
-                </div>
-                <div style={{ fontSize: '1.5rem', color: 'var(--gray-500)' }}>VS</div>
-                <div className="player-score">
-                  <div style={{ fontWeight: 'bold' }}>{gameInfo.players[1]?.username}</div>
-                  <div style={{ fontSize: '2rem', textAlign: 'center' }}>{gameInfo.score.player2}</div>
-                </div>
-              </div>
-            )}
 
-            {/* Actions */}
             <div className="game-actions" style={{ display: 'flex', gap: '0.5rem' }}>
-              <button className="btn btn-secondary">
-                ⚙️ Options
-              </button>
-              <button className="btn btn-danger">
-                🚪 Quitter
-              </button>
+              <button className="btn btn-secondary">⚙️</button>
+              <button className="btn btn-danger">🚪 Quitter</button>
             </div>
           </div>
         </div>
       </div>
 
       <div className="container">
-        <div className="game-layout" style={{
+        <div style={{
           display: 'grid',
           gridTemplateColumns: '1fr 300px',
           gap: '1.5rem',
-          height: 'calc(100vh - 200px)'
+          minHeight: '600px'
         }}>
           
-          {/* Zone de jeu principale - ICI QUE GAME_D INJECTE SON MOTEUR */}
-          <div className="game-area card" style={{
+          <div className="card" style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            minHeight: '500px',
             background: '#1a1a1a'
           }}>
-            {/* PLACEHOLDER - Game_D remplacera ce div par son canvas */}
-            <div id="game-engine-container" style={{
+            <div id="game-canvas-container" style={{
               width: '100%',
               height: '100%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: 'white',
-              fontSize: '1.2rem'
+              flexDirection: 'column',
+              gap: '1rem'
             }}>
-              🎮 Zone réservée au moteur de jeu (Game_D)
-              <br />
-              <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>
-                Canvas WebGL/2D sera injecté ici
-              </span>
+              <div style={{ fontSize: '3rem' }}>🎮</div>
+              <div style={{ fontSize: '1.2rem' }}>Zone du moteur de jeu (Game_D)</div>
+              <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
+                Canvas WebGL sera injecté ici
+              </div>
             </div>
           </div>
 
-          {/* Sidebar droite */}
           <div className="game-sidebar">
-            
-            {/* Informations des joueurs */}
             <div className="card mb-4">
               <h3 style={{ marginBottom: '1rem' }}>👥 Joueurs</h3>
-              {gameInfo?.players.map(player => (
-                <div key={player.id} className="player-item" style={{
+              {gameData.players.map((player, index) => (
+                <div key={player.id} style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.75rem',
@@ -157,31 +165,26 @@ const Game: React.FC = () => {
                   borderRadius: '6px',
                   marginBottom: '0.5rem'
                 }}>
-                  <span style={{ fontSize: '1.5rem' }}>{player.avatar}</span>
-                  <div>
-                    <div style={{ fontWeight: 'bold' }}>{player.username}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--gray-600)' }}>
-                      {player.isReady ? '✅ Prêt' : '⏳ En attente'}
-                    </div>
-                  </div>
+                  <span style={{ fontSize: '1.5rem' }}>{player.avatar || '😀'}</span>
+                  <span style={{ fontWeight: 'bold' }}>{player.username}</span>
                 </div>
               ))}
             </div>
 
-            {/* Spectateurs */}
             <div className="card mb-4">
-              <h3 style={{ marginBottom: '1rem' }}>👀 Spectateurs ({gameInfo?.spectators || 0})</h3>
-              <div style={{ fontSize: '0.9rem', color: 'var(--gray-600)' }}>
-                Les spectateurs peuvent regarder et discuter
-              </div>
+              <h3 style={{ marginBottom: '1rem' }}>
+                👀 Spectateurs ({gameData.spectatorCount})
+              </h3>
             </div>
 
-            {/* Chat en temps réel */}
-            <div className="card" style={{ height: '300px', display: 'flex', flexDirection: 'column' }}>
+            <div className="card" style={{ 
+              height: '300px', 
+              display: 'flex', 
+              flexDirection: 'column' 
+            }}>
               <h3 style={{ marginBottom: '1rem' }}>💬 Chat</h3>
               
-              {/* Messages */}
-              <div className="chat-messages" style={{
+              <div style={{
                 flex: 1,
                 overflowY: 'auto',
                 border: '1px solid var(--gray-300)',
@@ -190,13 +193,17 @@ const Game: React.FC = () => {
                 marginBottom: '0.5rem',
                 background: 'var(--gray-50)'
               }}>
-                {chatMessages.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: 'var(--gray-500)', fontSize: '0.9rem' }}>
+                {messages.length === 0 ? (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    color: 'var(--gray-500)', 
+                    fontSize: '0.9rem' 
+                  }}>
                     Aucun message
                   </div>
                 ) : (
-                  chatMessages.map(msg => (
-                    <div key={msg.id} style={{ marginBottom: '0.5rem' }}>
+                  messages.map((msg, index) => (
+                    <div key={index} style={{ marginBottom: '0.5rem' }}>
                       <strong style={{ color: 'var(--primary)' }}>{msg.username}:</strong>{' '}
                       <span style={{ fontSize: '0.9rem' }}>{msg.message}</span>
                     </div>
@@ -204,14 +211,13 @@ const Game: React.FC = () => {
                 )}
               </div>
 
-              {/* Input chat */}
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <input
                   type="text"
                   className="input"
-                  placeholder="Tapez votre message..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Message..."
+                  value={chatMessage}
+                  onChange={(e) => setChatMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                   style={{ fontSize: '0.9rem' }}
                 />

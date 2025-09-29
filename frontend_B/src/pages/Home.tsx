@@ -1,70 +1,203 @@
-// frontend_B/src/pages/Home.tsx - PAGE D'ACCUEIL SIMPLE ET FONCTIONNELLE
+// frontend_B/src/pages/Home.tsx - VERSION PROPRE PRÊTE BACKEND
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { tournamentAPI, leaderboardAPI } from '../services/api';
+
+interface QuickStats {
+  activeTournaments: number;
+  onlinePlayers: number;
+  totalMatches: number;
+}
 
 const Home: React.FC = () => {
+  const [stats, setStats] = useState<QuickStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // TODO: Créer endpoint pour les stats de la home page
+        // const response = await api.get('/stats/home');
+        // setStats(response.data);
+        
+        // Pour l'instant, on laisse null
+        setStats(null);
+      } catch (err) {
+        console.error('Erreur chargement stats:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
   return (
-    <div>
+    <div className="home-page">
       {/* Hero Section */}
-      <section className="page-header">
-        <div className="container text-center">
-          <h1 className="page-title">TRANSCENDENCE</h1>
-          <p className="page-subtitle">
-            Bienvenue dans l'arène du Pong nouvelle génération
+      <div style={{
+        background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
+        color: 'white',
+        padding: '4rem 0',
+        textAlign: 'center'
+      }}>
+        <div className="container">
+          <h1 style={{ 
+            fontSize: '3.5rem', 
+            fontWeight: 'bold', 
+            marginBottom: '1rem',
+            textShadow: '2px 2px 4px rgba(0,0,0,0.2)'
+          }}>
+            🏓 Transcendence
+          </h1>
+          <p style={{ 
+            fontSize: '1.5rem', 
+            marginBottom: '2rem',
+            opacity: 0.95
+          }}>
+            Le meilleur jeu de Pong en ligne
           </p>
-        </div>
-      </section>
-
-      {/* Actions principales */}
-      <section className="container">
-        <div className="grid grid-2 mb-8">
-          <div className="card text-center">
-            <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>🏆 Tournois</h2>
-            <p style={{ marginBottom: '1.5rem', color: 'var(--gray-700)' }}>
-              Participez aux tournois en cours ou consultez les résultats
-            </p>
-            <Link to="/tournaments" className="btn btn-primary">
-              Voir les tournois
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link to="/login" className="btn" style={{ 
+              background: 'white', 
+              color: 'var(--primary)',
+              padding: '1rem 2rem',
+              fontSize: '1.1rem'
+            }}>
+              🚀 Commencer à jouer
             </Link>
-          </div>
-
-          <div className="card text-center">
-            <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>⚔️ Créer</h2>
-            <p style={{ marginBottom: '1.5rem', color: 'var(--gray-700)' }}>
-              Organisez votre propre tournoi et invitez vos amis
-            </p>
-            <Link to="/create-tournament" className="btn btn-success">
-              Créer un tournoi
+            <Link to="/tournaments" className="btn" style={{ 
+              background: 'rgba(255,255,255,0.2)', 
+              color: 'white',
+              border: '2px solid white',
+              padding: '1rem 2rem',
+              fontSize: '1.1rem'
+            }}>
+              🏆 Voir les tournois
             </Link>
           </div>
         </div>
+      </div>
 
+      <div className="container" style={{ paddingTop: '3rem' }}>
         {/* Stats rapides */}
-        <div className="card">
-          <h3 style={{ marginBottom: '1rem' }}>📊 Statistiques rapides</h3>
-          <div className="grid grid-3">
-            <div className="text-center">
+        {!isLoading && stats && (
+          <div className="grid grid-3" style={{ marginBottom: '3rem' }}>
+            <div className="card" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🏆</div>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
-                1,247
+                {stats.activeTournaments}
               </div>
-              <div style={{ color: 'var(--gray-700)' }}>Joueurs actifs</div>
+              <div style={{ color: 'var(--gray-600)' }}>Tournois actifs</div>
             </div>
-            <div className="text-center">
+
+            <div className="card" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>👥</div>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--success)' }}>
-                89
+                {stats.onlinePlayers}
               </div>
-              <div style={{ color: 'var(--gray-700)' }}>Tournois organisés</div>
+              <div style={{ color: 'var(--gray-600)' }}>Joueurs en ligne</div>
             </div>
-            <div className="text-center">
+
+            <div className="card" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🎮</div>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--warning)' }}>
-                5,432
+                {stats.totalMatches}
               </div>
-              <div style={{ color: 'var(--gray-700)' }}>Parties jouées</div>
+              <div style={{ color: 'var(--gray-600)' }}>Parties jouées</div>
+            </div>
+          </div>
+        )}
+
+        {/* Fonctionnalités */}
+        <div style={{ marginBottom: '3rem' }}>
+          <h2 style={{ textAlign: 'center', marginBottom: '2rem', fontSize: '2rem' }}>
+            ✨ Fonctionnalités
+          </h2>
+          <div className="grid grid-3">
+            <div className="card" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎮</div>
+              <h3 style={{ marginBottom: '0.5rem' }}>Jeu en temps réel</h3>
+              <p style={{ color: 'var(--gray-600)', fontSize: '0.9rem' }}>
+                Affrontez vos amis dans des parties de Pong multijoueur en temps réel
+              </p>
+            </div>
+
+            <div className="card" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏆</div>
+              <h3 style={{ marginBottom: '0.5rem' }}>Tournois</h3>
+              <p style={{ color: 'var(--gray-600)', fontSize: '0.9rem' }}>
+                Créez et participez à des tournois avec système de brackets
+              </p>
+            </div>
+
+            <div className="card" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📊</div>
+              <h3 style={{ marginBottom: '0.5rem' }}>Classement</h3>
+              <p style={{ color: 'var(--gray-600)', fontSize: '0.9rem' }}>
+                Suivez vos stats et grimpez dans le classement mondial
+              </p>
+            </div>
+
+            <div className="card" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔐</div>
+              <h3 style={{ marginBottom: '0.5rem' }}>OAuth & 2FA</h3>
+              <p style={{ color: 'var(--gray-600)', fontSize: '0.9rem' }}>
+                Connexion sécurisée avec 42, Google, GitHub et authentification 2FA
+              </p>
+            </div>
+
+            <div className="card" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👥</div>
+              <h3 style={{ marginBottom: '0.5rem' }}>Social</h3>
+              <p style={{ color: 'var(--gray-600)', fontSize: '0.9rem' }}>
+                Ajoutez des amis, chattez et suivez leurs performances
+              </p>
+            </div>
+
+            <div className="card" style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🌍</div>
+              <h3 style={{ marginBottom: '0.5rem' }}>Multilingue</h3>
+              <p style={{ color: 'var(--gray-600)', fontSize: '0.9rem' }}>
+                Interface disponible en français et anglais
+              </p>
             </div>
           </div>
         </div>
-      </section>
+
+        {/* CTA Final */}
+        <div className="card" style={{ 
+          textAlign: 'center', 
+          padding: '3rem',
+          background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1))'
+        }}>
+          <h2 style={{ marginBottom: '1rem', fontSize: '2rem' }}>
+            Prêt à jouer ? 🎮
+          </h2>
+          <p style={{ 
+            color: 'var(--gray-600)', 
+            marginBottom: '2rem',
+            fontSize: '1.1rem'
+          }}>
+            Rejoignez des milliers de joueurs et montrez vos compétences
+          </p>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link to="/login" className="btn btn-primary" style={{ 
+              padding: '1rem 2rem',
+              fontSize: '1.1rem'
+            }}>
+              🚀 S'inscrire gratuitement
+            </Link>
+            <Link to="/leaderboard" className="btn btn-secondary" style={{ 
+              padding: '1rem 2rem',
+              fontSize: '1.1rem'
+            }}>
+              📊 Voir le classement
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
