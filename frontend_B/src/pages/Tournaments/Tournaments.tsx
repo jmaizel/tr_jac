@@ -1,8 +1,8 @@
-// frontend_B/src/pages/Tournaments.tsx - VERSION PROPRE PRÊTE BACKEND
-
+// frontend_B/src/pages/Tournaments/Tournaments.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { tournamentAPI } from '../services/api';
+import { tournamentAPI } from '../../services/api';
+import './Tournaments.css';
 
 interface Tournament {
   id: number;
@@ -13,7 +13,6 @@ interface Tournament {
   maxParticipants: number;
   currentParticipants: number;
   createdAt: string;
-  startDate?: string;
   creator: {
     username: string;
   };
@@ -54,7 +53,6 @@ const Tournaments: React.FC = () => {
     fetchTournaments();
   }, [filters.status, filters.type]);
 
-  // Filtrage côté client pour la recherche
   const filteredTournaments = tournaments.filter(tournament => 
     tournament.name.toLowerCase().includes(filters.search.toLowerCase()) ||
     tournament.description.toLowerCase().includes(filters.search.toLowerCase())
@@ -82,7 +80,7 @@ const Tournaments: React.FC = () => {
     <div className="tournaments-page">
       <div className="page-header">
         <div className="container">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="tournaments-header-content">
             <div>
               <h1 className="page-title">🏆 Tournois</h1>
               <p className="page-subtitle">Rejoignez ou créez un tournoi</p>
@@ -95,14 +93,9 @@ const Tournaments: React.FC = () => {
       </div>
 
       <div className="container">
-        {/* Filtres */}
-        <div className="card" style={{ marginBottom: '2rem' }}>
-          <h3 style={{ marginBottom: '1rem' }}>🔍 Filtres</h3>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '1rem' 
-          }}>
+        <div className="card tournaments-filters">
+          <h3 className="filters-title">🔍 Filtres</h3>
+          <div className="filters-grid">
             <div className="form-group">
               <label className="form-label">Statut</label>
               <select
@@ -143,22 +136,21 @@ const Tournaments: React.FC = () => {
           </div>
         </div>
 
-        {/* Liste des tournois */}
         {isLoading ? (
-          <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-            <div style={{ fontSize: '3rem' }}>⏳</div>
+          <div className="tournaments-loading">
+            <div className="loading-icon">⏳</div>
             <p>Chargement des tournois...</p>
           </div>
         ) : error ? (
-          <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-            <div style={{ fontSize: '3rem', color: 'var(--danger)' }}>⚠️</div>
-            <p style={{ color: 'var(--danger)' }}>{error}</p>
+          <div className="tournaments-error">
+            <div className="error-icon">⚠️</div>
+            <p className="error-message">{error}</p>
           </div>
         ) : filteredTournaments.length === 0 ? (
-          <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-            <div style={{ fontSize: '3rem' }}>😕</div>
-            <p style={{ color: 'var(--gray-600)' }}>Aucun tournoi trouvé</p>
-            <Link to="/create-tournament" className="btn btn-primary" style={{ marginTop: '1rem' }}>
+          <div className="card tournaments-empty">
+            <div className="empty-icon">😕</div>
+            <p className="empty-text">Aucun tournoi trouvé</p>
+            <Link to="/create-tournament" className="btn btn-primary">
               ➕ Créer le premier tournoi
             </Link>
           </div>
@@ -169,62 +161,49 @@ const Tournaments: React.FC = () => {
               const progress = (tournament.currentParticipants / tournament.maxParticipants) * 100;
 
               return (
-                <div key={tournament.id} className="card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                    <h3 style={{ margin: 0, flex: 1 }}>{tournament.name}</h3>
-                    <span style={{ 
-                      padding: '0.25rem 0.75rem', 
-                      borderRadius: '20px',
-                      fontSize: '0.85rem',
-                      fontWeight: 'bold',
-                      background: `${statusBadge.color}20`,
-                      color: statusBadge.color
-                    }}>
+                <div key={tournament.id} className="card tournament-card">
+                  <div className="tournament-card-header">
+                    <h3 className="tournament-name">{tournament.name}</h3>
+                    <span 
+                      className="tournament-badge"
+                      style={{ 
+                        background: `${statusBadge.color}20`,
+                        color: statusBadge.color
+                      }}
+                    >
                       {statusBadge.text}
                     </span>
                   </div>
 
-                  <p style={{ color: 'var(--gray-600)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                  <p className="tournament-description">
                     {tournament.description || 'Pas de description'}
                   </p>
 
-                  <div style={{ marginBottom: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                  <div className="tournament-progress">
+                    <div className="tournament-progress-info">
                       <span>{getTypeName(tournament.type)}</span>
-                      <span style={{ fontWeight: 'bold' }}>
+                      <span className="tournament-participants">
                         {tournament.currentParticipants}/{tournament.maxParticipants}
                       </span>
                     </div>
-                    <div style={{ 
-                      width: '100%', 
-                      height: '8px', 
-                      background: 'var(--gray-200)', 
-                      borderRadius: '4px',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{ 
-                        width: `${progress}%`, 
-                        height: '100%', 
-                        background: progress >= 100 ? 'var(--danger)' : 'var(--success)',
-                        transition: 'width 0.3s'
-                      }}></div>
+                    <div className="tournament-progress-bar">
+                      <div 
+                        className="tournament-progress-fill"
+                        style={{ 
+                          width: `${progress}%`,
+                          background: progress >= 100 ? 'var(--danger)' : 'var(--success)'
+                        }}
+                      ></div>
                     </div>
                   </div>
 
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    paddingTop: '1rem',
-                    borderTop: '1px solid var(--gray-200)'
-                  }}>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>
+                  <div className="tournament-card-footer">
+                    <span className="tournament-creator">
                       Par {tournament.creator.username}
                     </span>
                     <Link 
                       to={`/tournaments/${tournament.id}`} 
-                      className="btn btn-primary"
-                      style={{ padding: '0.5rem 1rem' }}
+                      className="btn btn-primary btn-sm"
                     >
                       Voir détails →
                     </Link>

@@ -1,8 +1,8 @@
-// frontend_B/src/pages/Profile.tsx - VERSION COMPATIBLE BACKEND
-
+// frontend_B/src/pages/Profile/Profile.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { userAPI } from '../services/api';
+import { userAPI } from '../../services/api';
+import './Profile.css';
 
 interface UserProfile {
   id: number;
@@ -46,8 +46,8 @@ const Profile: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="container" style={{ textAlign: 'center', paddingTop: '3rem' }}>
-        <div style={{ fontSize: '3rem' }}>⏳</div>
+      <div className="profile-loading">
+        <div className="loading-icon">⏳</div>
         <p>Chargement du profil...</p>
       </div>
     );
@@ -55,9 +55,9 @@ const Profile: React.FC = () => {
 
   if (error || !profile) {
     return (
-      <div className="container" style={{ textAlign: 'center', paddingTop: '3rem' }}>
-        <div style={{ fontSize: '3rem', color: 'var(--danger)' }}>⚠️</div>
-        <p style={{ color: 'var(--danger)' }}>{error || 'Profil introuvable'}</p>
+      <div className="profile-error">
+        <div className="error-icon">⚠️</div>
+        <p className="error-message">{error || 'Profil introuvable'}</p>
       </div>
     );
   }
@@ -66,17 +66,11 @@ const Profile: React.FC = () => {
     <div className="profile-page">
       <div className="page-header">
         <div className="container">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-            <div style={{ 
-              fontSize: '5rem',
-              background: 'white',
-              padding: '1rem',
-              borderRadius: '50%',
-              boxShadow: 'var(--shadow-lg)'
-            }}>
+          <div className="profile-header-content">
+            <div className="profile-avatar-large">
               {profile.avatar || '😀'}
             </div>
-            <div>
+            <div className="profile-header-info">
               <h1 className="page-title">{profile.displayName || profile.username}</h1>
               <p className="page-subtitle">@{profile.username}</p>
             </div>
@@ -87,81 +81,73 @@ const Profile: React.FC = () => {
       <div className="container">
         <div className="grid grid-2">
           
-          {/* Informations du compte */}
           <div className="card">
-            <h2 style={{ marginBottom: '1.5rem' }}>👤 Informations</h2>
+            <h2 className="profile-section-title">👤 Informations</h2>
             
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              <div>
+            <div className="profile-info-list">
+              <div className="profile-info-item">
                 <strong>👤 Nom d'utilisateur :</strong><br />
-                <span style={{ color: 'var(--gray-700)' }}>{profile.username}</span>
+                <span className="profile-info-value">{profile.username}</span>
               </div>
               
-              <div>
+              <div className="profile-info-item">
                 <strong>✉️ Email :</strong><br />
-                <span style={{ color: 'var(--gray-700)' }}>{profile.email}</span>
+                <span className="profile-info-value">{profile.email}</span>
               </div>
               
-              <div>
+              <div className="profile-info-item">
                 <strong>🏷️ Nom d'affichage :</strong><br />
-                <span style={{ color: 'var(--gray-700)' }}>
+                <span className="profile-info-value">
                   {profile.displayName || 'Non défini'}
                 </span>
               </div>
               
-              <div>
+              <div className="profile-info-item">
                 <strong>😀 Avatar :</strong><br />
-                <span style={{ fontSize: '2rem' }}>{profile.avatar || '😀'}</span>
+                <span className="profile-avatar-display">{profile.avatar || '😀'}</span>
               </div>
               
-              <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--gray-200)' }}>
+              <div className="profile-info-item profile-info-item-divider">
                 <strong>📅 Membre depuis :</strong><br />
-                <span style={{ color: 'var(--gray-700)' }}>
+                <span className="profile-info-value">
                   {formatDate(profile.createdAt)}
                 </span>
               </div>
               
-              <div>
+              <div className="profile-info-item">
                 <strong>🔄 Dernière mise à jour :</strong><br />
-                <span style={{ color: 'var(--gray-700)' }}>
+                <span className="profile-info-value">
                   {formatDate(profile.updatedAt)}
                 </span>
               </div>
             </div>
 
-            <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--gray-200)' }}>
+            <div className="profile-actions">
               <button 
                 onClick={() => navigate('/settings')}
-                className="btn btn-primary" 
-                style={{ width: '100%' }}
+                className="btn btn-primary btn-full"
               >
                 ⚙️ Modifier le profil
               </button>
             </div>
           </div>
 
-          {/* Statistiques - En attente du backend */}
           <div className="card">
-            <h2 style={{ marginBottom: '1.5rem' }}>📊 Statistiques</h2>
+            <h2 className="profile-section-title">📊 Statistiques</h2>
             
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '3rem 2rem',
-              color: 'var(--gray-600)' 
-            }}>
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📊</div>
+            <div className="profile-stats-placeholder">
+              <div className="placeholder-icon">📊</div>
               <p>Les statistiques seront disponibles prochainement</p>
-              <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+              <p className="placeholder-info">
                 Endpoint /users/me/stats à implémenter dans le backend
               </p>
             </div>
           </div>
         </div>
 
-        {/* Actions rapides */}
-        <div className="card" style={{ marginTop: '2rem' }}>
-          <h2 style={{ marginBottom: '1.5rem' }}>⚡ Actions rapides</h2>
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        <div className="card profile-quick-actions">
+          <h2 className="profile-section-title">⚡ Actions rapides</h2>
+          <div className="profile-actions-grid">
             <button 
               onClick={() => navigate('/tournaments')}
               className="btn btn-secondary"
